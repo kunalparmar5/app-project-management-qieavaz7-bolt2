@@ -52,7 +52,19 @@ const DatabaseViewer: React.FC = () => {
       console.log("📊 Total Properties Found:", allProperties.length);
     } catch (error: any) {
       console.error("Error loading properties:", error);
-      setError(error.message || "Failed to load properties");
+
+      // Provide more specific error messages
+      if (error.code === "auth/unauthenticated") {
+        setError(
+          "You must be signed in to view the database. Please sign in and try again.",
+        );
+      } else if (error.code === "permission-denied") {
+        setError(
+          "Database access denied. Please check your Firestore security rules in the Firebase console.",
+        );
+      } else {
+        setError(error.message || "Failed to load properties");
+      }
     } finally {
       setLoading(false);
     }

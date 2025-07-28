@@ -179,11 +179,18 @@ const PropertyListings = () => {
       setHasMore(fetchedProperties.length === 20);
     } catch (error: any) {
       console.error("Error loading properties:", error);
-      setError(error.message || "Failed to load properties");
 
-      // Fallback to mock data on error
-      console.log("Using mock data as fallback due to error");
-      setProperties(mockProperties as Property[]);
+      // If it's an authentication error, don't show error message, just use mock data
+      if (error.code === "auth/unauthenticated") {
+        console.log("User not authenticated, using mock data");
+        setProperties(mockProperties as Property[]);
+        setError(null);
+      } else {
+        setError(error.message || "Failed to load properties");
+        // Fallback to mock data on error
+        console.log("Using mock data as fallback due to error");
+        setProperties(mockProperties as Property[]);
+      }
     } finally {
       setLoading(false);
     }

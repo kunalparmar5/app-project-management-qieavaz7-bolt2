@@ -118,10 +118,16 @@ const PropertyUpload: React.FC = () => {
     try {
       // Import propertyService dynamically to avoid circular dependencies
       const { propertyService } = await import("../services/propertyService");
-      const { useAuth } = await import("../contexts/AuthContext");
 
       // Get current user from auth context
-      const currentUserId = currentUser?.uid || "anonymous-user";
+      const currentUserId = currentUser?.uid;
+
+      if (!currentUserId) {
+        alert(
+          "You must be signed in to post a property. Please sign in and try again.",
+        );
+        return;
+      }
 
       const propertyData = {
         title: formData.title,

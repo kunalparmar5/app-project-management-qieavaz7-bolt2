@@ -175,13 +175,8 @@ class PropertyService {
         console.warn(
           "⚠️ User is not authenticated - this may be the cause of permission denied",
         );
-        const authError = {
-          code: "auth/unauthenticated",
-          message:
-            "You must be signed in to view properties. Please sign in and try again.",
-          originalError: error,
-        };
-        throw authError;
+        console.warn("🔄 Falling back to mock data for unauthenticated users");
+        // Don't throw error, let it fall through to use mock data
       }
 
       const firebaseError = handleFirebaseError(error, "get properties");
