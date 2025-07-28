@@ -1,5 +1,11 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { 
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import {
   User,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -12,10 +18,44 @@ import {
   onAuthStateChanged,
   signInWithPhoneNumber,
   ConfirmationResult,
-  AuthError
-} from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, googleProvider, db } from '../config/firebase';
+  AuthError,
+} from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { auth, googleProvider, db } from "../config/firebase";
+import {
+  handleFirebaseError,
+  debugFirebaseConnection,
+} from "../utils/firebaseDebug";
+
+// Phone number validation and formatting utilities
+const formatPhoneNumber = (phoneNumber: string): string => {
+  // Remove all non-digit characters except +
+  let formatted = phoneNumber.replace(/[^\d+]/g, "");
+
+  // If no country code, assume US (+1)
+  if (!formatted.startsWith("+")) {
+    if (formatted.length === 10) {
+      formatted = "+1" + formatted;
+    } else if (formatted.length === 11 && formatted.startsWith("1")) {
+      formatted = "+" + formatted;
+    } else {
+      // For other lengths, add + if missing
+      formatted = "+" + formatted;
+    }
+  }
+
+  return formatted;
+};
+
+const isValidPhoneNumber = (phoneNumber: string): boolean => {
+  // Basic validation for international phone numbers
+  const phoneRegex = /^\+[1-9]\d{1,14}$/;
+  return (
+    phoneRegex.test(phoneNumber) &&
+    phoneNumber.length >= 8 &&
+    phoneNumber.length <= 16
+  );
+};
 
 interface UserProfile {
   uid: string;
@@ -31,21 +71,72 @@ interface UserProfile {
     marketing: boolean;
     rememberMe: boolean;
   };
+  profile: {
+    firstName?: string;
+    lastName?: string;
+    dateOfBirth?: Date;
+    gender?: "male" | "female" | "other";
+    occupation?: string;
+    address?: {
+      street?: string;
+      city?: string;
+      state?: string;
+      zipCode?: string;
+      country?: string;
+    };
+    emergencyContact?: {
+      name?: string;
+      phone?: string;
+      relationship?: string;
+    };
+  };
+  propertyPreferences?: {
+    propertyType?: string[];
+    budget?: {
+      min?: number;
+      max?: number;
+    };
+    location?: string[];
+    amenities?: string[];
+  };
+  savedProperties?: string[];
+  viewedProperties?: string[];
+  role: "user" | "agent" | "admin";
+  isActive: boolean;
 }
 
 interface AuthContextType {
   currentUser: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<User>;
-  signUp: (email: string, password: string, displayName: string) => Promise<User>;
+  signIn: (
+    email: string,
+    password: string,
+    rememberMe?: boolean,
+  ) => Promise<User>;
+  signUp: (
+    email: string,
+    password: string,
+    displayName: string,
+  ) => Promise<User>;
   signInWithGoogle: () => Promise<User>;
   signInWithGoogleRedirect: () => Promise<void>;
   signInWithPhone: (phoneNumber: string) => Promise<ConfirmationResult>;
-  confirmPhoneSignIn: (confirmationResult: ConfirmationResult, code: string) => Promise<User>;
+  confirmPhoneSignIn: (
+    confirmationResult: ConfirmationResult,
+    code: string,
+  ) => Promise<User>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  getUserProfile: (uid: string) => Promise<UserProfile | null>;
+  deleteUserProfile: (uid: string) => Promise<void>;
+  saveProperty: (propertyId: string) => Promise<void>;
+  removeSavedProperty: (propertyId: string) => Promise<void>;
+  addViewedProperty: (propertyId: string) => Promise<void>;
+  updatePropertyPreferences: (
+    preferences: UserProfile["propertyPreferences"],
+  ) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,7 +144,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -67,19 +158,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Debug Firebase connection on mount
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      debugFirebaseConnection().then((results) => {
+        console.log("Firebase Debug Results:", results);
+        if (results.errors.length > 0) {
+          console.warn("Firebase connection issues detected:", results.errors);
+        }
+      });
+    }
+  }, []);
+
   // Create or update user profile in Firestore
-  const createUserProfile = async (user: User, additionalData?: any): Promise<UserProfile> => {
-    const userRef = doc(db, 'users', user.uid);
+  const createUserProfile = async (
+    user: User,
+    additionalData?: any,
+  ): Promise<UserProfile> => {
+    const userRef = doc(db, "users", user.uid);
     const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
       const { displayName, email, phoneNumber, photoURL } = user;
       const createdAt = new Date();
-      
+
       const newProfile: UserProfile = {
         uid: user.uid,
-        email: email || '',
-        displayName: displayName || '',
+        email: email || "",
+        displayName: displayName || "",
         phoneNumber: phoneNumber || undefined,
         photoURL: photoURL || undefined,
         createdAt,
@@ -88,16 +194,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         preferences: {
           notifications: true,
           marketing: false,
-          rememberMe: false
+          rememberMe: false,
         },
-        ...additionalData
+        profile: {
+          firstName: displayName?.split(" ")[0] || "",
+          lastName: displayName?.split(" ").slice(1).join(" ") || "",
+        },
+        propertyPreferences: {
+          propertyType: [],
+          budget: { min: 0, max: 0 },
+          location: [],
+          amenities: [],
+        },
+        savedProperties: [],
+        viewedProperties: [],
+        role: "user",
+        isActive: true,
+        ...additionalData,
       };
 
       try {
         await setDoc(userRef, newProfile);
         return newProfile;
       } catch (error) {
-        console.error('Error creating user profile:', error);
+        console.error("Error creating user profile:", error);
         throw error;
       }
     } else {
@@ -106,46 +226,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const updatedProfile = {
         ...existingProfile,
         lastLoginAt: new Date(),
-        emailVerified: user.emailVerified
+        emailVerified: user.emailVerified,
       };
-      
+
       await setDoc(userRef, updatedProfile, { merge: true });
       return updatedProfile;
     }
   };
 
   // Sign in with email and password
-  const signIn = async (email: string, password: string, rememberMe = false): Promise<User> => {
+  const signIn = async (
+    email: string,
+    password: string,
+    rememberMe = false,
+  ): Promise<User> => {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
-      
+
       // Update user profile
       const profile = await createUserProfile(result.user);
       profile.preferences.rememberMe = rememberMe;
       await updateUserProfile(profile);
-      
+
       return result.user;
     } catch (error) {
-      console.error('Sign in error:', error);
-      throw error;
+      const firebaseError = handleFirebaseError(error, "sign in");
+      throw firebaseError;
     }
   };
 
   // Sign up with email and password
-  const signUp = async (email: string, password: string, displayName: string): Promise<User> => {
+  const signUp = async (
+    email: string,
+    password: string,
+    displayName: string,
+  ): Promise<User> => {
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      
+      const result = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
+
       // Update display name
       await updateProfile(result.user, { displayName });
-      
+
       // Create user profile
       await createUserProfile(result.user, { displayName });
-      
+
       return result.user;
     } catch (error) {
-      console.error('Sign up error:', error);
-      throw error;
+      const firebaseError = handleFirebaseError(error, "sign up");
+      throw firebaseError;
     }
   };
 
@@ -156,8 +288,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await createUserProfile(result.user);
       return result.user;
     } catch (error) {
-      console.error('Google sign in error:', error);
-      throw error;
+      const firebaseError = handleFirebaseError(error, "Google sign in");
+      throw firebaseError;
     }
   };
 
@@ -166,32 +298,67 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await signInWithRedirect(auth, googleProvider);
     } catch (error) {
-      console.error('Google redirect sign in error:', error);
+      console.error("Google redirect sign in error:", error);
       throw error;
     }
   };
 
   // Sign in with phone number
-  const signInWithPhone = async (phoneNumber: string): Promise<ConfirmationResult> => {
+  const signInWithPhone = async (
+    phoneNumber: string,
+  ): Promise<ConfirmationResult> => {
     try {
-      // Note: This requires reCAPTCHA setup in the component
-      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+      // Validate phone number format
+      const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+      if (!isValidPhoneNumber(formattedPhoneNumber)) {
+        const error = new Error(
+          "Invalid phone number format. Please include country code (e.g., +1234567890).",
+        ) as any;
+        error.code = "auth/invalid-phone-number";
+        throw error;
+      }
+
+      // Check if recaptchaVerifier exists
+      if (!window.recaptchaVerifier) {
+        const error = new Error(
+          "reCAPTCHA verifier not initialized. Please refresh the page and try again.",
+        ) as any;
+        error.code = "auth/captcha-check-failed";
+        throw error;
+      }
+
+      const confirmationResult = await signInWithPhoneNumber(
+        auth,
+        formattedPhoneNumber,
+        window.recaptchaVerifier,
+      );
       return confirmationResult;
     } catch (error) {
-      console.error('Phone sign in error:', error);
-      throw error;
+      const firebaseError = handleFirebaseError(error, "phone sign in");
+      throw firebaseError;
     }
   };
 
   // Confirm phone sign in with verification code
-  const confirmPhoneSignIn = async (confirmationResult: ConfirmationResult, code: string): Promise<User> => {
+  const confirmPhoneSignIn = async (
+    confirmationResult: ConfirmationResult,
+    code: string,
+  ): Promise<User> => {
     try {
-      const result = await confirmationResult.confirm(code);
+      if (!code || code.length !== 6) {
+        const error = new Error(
+          "Please enter a valid 6-digit verification code.",
+        ) as any;
+        error.code = "auth/invalid-verification-code";
+        throw error;
+      }
+
+      const result = await confirmationResult.confirm(code.trim());
       await createUserProfile(result.user);
       return result.user;
     } catch (error) {
-      console.error('Phone confirmation error:', error);
-      throw error;
+      const firebaseError = handleFirebaseError(error, "phone confirmation");
+      throw firebaseError;
     }
   };
 
@@ -201,7 +368,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await signOut(auth);
       setUserProfile(null);
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
       throw error;
     }
   };
@@ -211,62 +378,201 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await sendPasswordResetEmail(auth, email);
     } catch (error) {
-      console.error('Password reset error:', error);
+      console.error("Password reset error:", error);
       throw error;
     }
   };
 
   // Update user profile
-  const updateUserProfile = async (updates: Partial<UserProfile>): Promise<void> => {
-    if (!currentUser) throw new Error('No user logged in');
-    
+  const updateUserProfile = async (
+    updates: Partial<UserProfile>,
+  ): Promise<void> => {
+    if (!currentUser) throw new Error("No user logged in");
+
     try {
-      const userRef = doc(db, 'users', currentUser.uid);
+      const userRef = doc(db, "users", currentUser.uid);
       await setDoc(userRef, updates, { merge: true });
-      
+
       if (userProfile) {
         setUserProfile({ ...userProfile, ...updates });
       }
     } catch (error) {
-      console.error('Profile update error:', error);
-      throw error;
+      const firebaseError = handleFirebaseError(error, "profile update");
+      throw firebaseError;
+    }
+  };
+
+  // Get user profile by UID
+  const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
+    try {
+      const userRef = doc(db, "users", uid);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        return userSnap.data() as UserProfile;
+      }
+      return null;
+    } catch (error) {
+      const firebaseError = handleFirebaseError(error, "get user profile");
+      throw firebaseError;
+    }
+  };
+
+  // Delete user profile
+  const deleteUserProfile = async (uid: string): Promise<void> => {
+    if (!currentUser || currentUser.uid !== uid) {
+      throw new Error("Unauthorized to delete this profile");
+    }
+
+    try {
+      const userRef = doc(db, "users", uid);
+      await setDoc(userRef, { isActive: false }, { merge: true });
+
+      if (userProfile) {
+        setUserProfile({ ...userProfile, isActive: false });
+      }
+    } catch (error) {
+      const firebaseError = handleFirebaseError(error, "delete user profile");
+      throw firebaseError;
+    }
+  };
+
+  // Save property to user's saved list
+  const saveProperty = async (propertyId: string): Promise<void> => {
+    if (!currentUser || !userProfile) throw new Error("No user logged in");
+
+    try {
+      const updatedSavedProperties = [
+        ...(userProfile.savedProperties || []),
+        propertyId,
+      ];
+      await updateUserProfile({ savedProperties: updatedSavedProperties });
+    } catch (error) {
+      const firebaseError = handleFirebaseError(error, "save property");
+      throw firebaseError;
+    }
+  };
+
+  // Remove property from user's saved list
+  const removeSavedProperty = async (propertyId: string): Promise<void> => {
+    if (!currentUser || !userProfile) throw new Error("No user logged in");
+
+    try {
+      const updatedSavedProperties = (userProfile.savedProperties || []).filter(
+        (id) => id !== propertyId,
+      );
+      await updateUserProfile({ savedProperties: updatedSavedProperties });
+    } catch (error) {
+      const firebaseError = handleFirebaseError(error, "remove saved property");
+      throw firebaseError;
+    }
+  };
+
+  // Add property to user's viewed list
+  const addViewedProperty = async (propertyId: string): Promise<void> => {
+    if (!currentUser || !userProfile) throw new Error("No user logged in");
+
+    try {
+      const viewedProperties = userProfile.viewedProperties || [];
+      if (!viewedProperties.includes(propertyId)) {
+        const updatedViewedProperties = [...viewedProperties, propertyId];
+        await updateUserProfile({ viewedProperties: updatedViewedProperties });
+      }
+    } catch (error) {
+      const firebaseError = handleFirebaseError(error, "add viewed property");
+      throw firebaseError;
+    }
+  };
+
+  // Update property preferences
+  const updatePropertyPreferences = async (
+    preferences: UserProfile["propertyPreferences"],
+  ): Promise<void> => {
+    if (!currentUser) throw new Error("No user logged in");
+
+    try {
+      await updateUserProfile({ propertyPreferences: preferences });
+    } catch (error) {
+      const firebaseError = handleFirebaseError(
+        error,
+        "update property preferences",
+      );
+      throw firebaseError;
     }
   };
 
   // Listen for auth state changes
   useEffect(() => {
+    let mounted = true;
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!mounted) return;
+
       setCurrentUser(user);
-      
+
       if (user) {
         try {
           const profile = await createUserProfile(user);
-          setUserProfile(profile);
+          if (mounted) {
+            setUserProfile(profile);
+          }
+
+          // Test database connection when user is authenticated
+          console.log(
+            "🔍 Testing database connection for authenticated user...",
+          );
+          try {
+            const { databaseHealth } = await import("../utils/databaseHealth");
+            const healthCheck = await databaseHealth.check();
+
+            if (!healthCheck.isConnected) {
+              console.warn(
+                "⚠️ Database connection issues detected:",
+                healthCheck.errors,
+              );
+            } else {
+              console.log(
+                "✅ Database connection healthy for authenticated user",
+              );
+            }
+          } catch (error) {
+            console.error("Database health check failed:", error);
+          }
         } catch (error) {
-          console.error('Error loading user profile:', error);
+          console.error("Error loading user profile:", error);
+          if (mounted) {
+            setUserProfile(null);
+          }
         }
       } else {
-        setUserProfile(null);
+        if (mounted) {
+          setUserProfile(null);
+        }
       }
-      
-      setLoading(false);
+
+      if (mounted) {
+        setLoading(false);
+      }
     });
 
     // Handle redirect result
     const handleRedirectResult = async () => {
       try {
         const result = await getRedirectResult(auth);
-        if (result?.user) {
+        if (result?.user && mounted) {
           await createUserProfile(result.user);
         }
       } catch (error) {
-        console.error('Error handling redirect result:', error);
+        console.error("Error handling redirect result:", error);
       }
     };
 
     handleRedirectResult();
 
-    return unsubscribe;
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, []);
 
   const value: AuthContextType = {
@@ -281,7 +587,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     confirmPhoneSignIn,
     logout,
     resetPassword,
-    updateUserProfile
+    updateUserProfile,
+    getUserProfile,
+    deleteUserProfile,
+    saveProperty,
+    removeSavedProperty,
+    addViewedProperty,
+    updatePropertyPreferences,
   };
 
   return (

@@ -1,204 +1,256 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Filter, Grid, List, SlidersHorizontal, MapPin, Search } from 'lucide-react';
-import PropertyCard from '../components/PropertyCard';
-import SearchBar from '../components/SearchBar';
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import {
+  Filter,
+  Grid,
+  List,
+  SlidersHorizontal,
+  MapPin,
+  Search,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
+import PropertyCard from "../components/PropertyCard";
+import SearchBar from "../components/SearchBar";
+import {
+  propertyService,
+  Property,
+  PropertyFilters,
+} from "../services/propertyService";
 
 const PropertyListings = () => {
   const [searchParams] = useSearchParams();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
-  const [filteredProperties, setFilteredProperties] = useState<any[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
 
-  // Mock data - in a real app, this would come from an API
-  const allProperties = [
+  // Mock data fallback - in case Firebase is not available
+  const mockProperties = [
     {
-      id: '1',
-      title: 'Spacious 2BHK Apartment in Andheri West',
-      price: '₹45,000',
-      location: 'Andheri West, Mumbai',
-      area: 'Andheri West',
+      id: "1",
+      title: "Spacious 2BHK Apartment in Andheri West",
+      price: "₹45,000",
+      location: "Andheri West, Mumbai",
+      area: "Andheri West",
       bedrooms: 2,
       bathrooms: 2,
       sqft: 950,
       images: [
-        'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=800',
-        'https://images.pexels.com/photos/1370704/pexels-photo-1370704.jpeg?auto=compress&cs=tinysrgb&w=800'
+        "https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/1370704/pexels-photo-1370704.jpeg?auto=compress&cs=tinysrgb&w=800",
       ],
-      type: 'rent' as const,
-      propertyType: '2 BHK',
-      amenities: ['Parking', 'Gym', 'Swimming Pool'],
+      type: "rent" as const,
+      propertyType: "2 BHK",
+      amenities: ["Parking", "Gym", "Swimming Pool"],
       rating: 4.5,
       reviews: 23,
       isVerified: true,
-      postedBy: 'Owner',
-      postedDate: '2 days ago'
+      postedBy: "Owner",
+      postedDate: "2 days ago",
     },
     {
-      id: '2',
-      title: 'Modern 3BHK Villa with Garden',
-      price: '₹1.2 Cr',
-      location: 'Whitefield, Bangalore',
-      area: 'Whitefield',
+      id: "2",
+      title: "Modern 3BHK Villa with Garden",
+      price: "₹1.2 Cr",
+      location: "Whitefield, Bangalore",
+      area: "Whitefield",
       bedrooms: 3,
       bathrooms: 3,
       sqft: 1800,
       images: [
-        'https://images.pexels.com/photos/1438832/pexels-photo-1438832.jpeg?auto=compress&cs=tinysrgb&w=800',
-        'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=800'
+        "https://images.pexels.com/photos/1438832/pexels-photo-1438832.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=800",
       ],
-      type: 'buy' as const,
-      propertyType: '3 BHK Villa',
-      amenities: ['Garden', 'Parking', 'Security'],
+      type: "buy" as const,
+      propertyType: "3 BHK Villa",
+      amenities: ["Garden", "Parking", "Security"],
       rating: 4.8,
       reviews: 15,
       isVerified: true,
-      postedBy: 'Builder',
-      postedDate: '1 week ago'
+      postedBy: "Builder",
+      postedDate: "1 week ago",
     },
     {
-      id: '3',
-      title: 'Luxury 1BHK Studio Apartment',
-      price: '₹28,000',
-      location: 'Koramangala, Bangalore',
-      area: 'Koramangala',
+      id: "3",
+      title: "Luxury 1BHK Studio Apartment",
+      price: "₹28,000",
+      location: "Koramangala, Bangalore",
+      area: "Koramangala",
       bedrooms: 1,
       bathrooms: 1,
       sqft: 650,
       images: [
-        'https://images.pexels.com/photos/2029667/pexels-photo-2029667.jpeg?auto=compress&cs=tinysrgb&w=800'
+        "https://images.pexels.com/photos/2029667/pexels-photo-2029667.jpeg?auto=compress&cs=tinysrgb&w=800",
       ],
-      type: 'rent' as const,
-      propertyType: '1 BHK',
-      amenities: ['Furnished', 'AC', 'WiFi'],
+      type: "rent" as const,
+      propertyType: "1 BHK",
+      amenities: ["Furnished", "AC", "WiFi"],
       rating: 4.2,
       reviews: 8,
       isVerified: false,
-      postedBy: 'Owner',
-      postedDate: '3 days ago'
+      postedBy: "Owner",
+      postedDate: "3 days ago",
     },
     {
-      id: '4',
-      title: 'Premium 4BHK Penthouse',
-      price: '₹2.5 Cr',
-      location: 'Bandra West, Mumbai',
-      area: 'Bandra West',
+      id: "4",
+      title: "Premium 4BHK Penthouse",
+      price: "₹2.5 Cr",
+      location: "Bandra West, Mumbai",
+      area: "Bandra West",
       bedrooms: 4,
       bathrooms: 4,
       sqft: 2500,
       images: [
-        'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=800'
+        "https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=800",
       ],
-      type: 'buy' as const,
-      propertyType: '4 BHK',
-      amenities: ['Sea View', 'Terrace', 'Lift', 'Parking'],
+      type: "buy" as const,
+      propertyType: "4 BHK",
+      amenities: ["Sea View", "Terrace", "Lift", "Parking"],
       rating: 4.9,
       reviews: 31,
       isVerified: true,
-      postedBy: 'Builder',
-      postedDate: '5 days ago'
+      postedBy: "Builder",
+      postedDate: "5 days ago",
     },
     {
-      id: '5',
-      title: 'Cozy 2BHK Family Apartment',
-      price: '₹32,000',
-      location: 'Sector 49, Gurgaon',
-      area: 'Sector 49',
+      id: "5",
+      title: "Cozy 2BHK Family Apartment",
+      price: "₹32,000",
+      location: "Sector 49, Gurgaon",
+      area: "Sector 49",
       bedrooms: 2,
       bathrooms: 2,
       sqft: 1100,
       images: [
-        'https://images.pexels.com/photos/1457842/pexels-photo-1457842.jpeg?auto=compress&cs=tinysrgb&w=800'
+        "https://images.pexels.com/photos/1457842/pexels-photo-1457842.jpeg?auto=compress&cs=tinysrgb&w=800",
       ],
-      type: 'rent' as const,
-      propertyType: '2 BHK',
-      amenities: ['Parking', 'Playground', 'Security'],
+      type: "rent" as const,
+      propertyType: "2 BHK",
+      amenities: ["Parking", "Playground", "Security"],
       rating: 4.3,
       reviews: 12,
       isVerified: true,
-      postedBy: 'Owner',
-      postedDate: '1 day ago'
+      postedBy: "Owner",
+      postedDate: "1 day ago",
     },
     {
-      id: '6',
-      title: 'Independent House with Parking',
-      price: '₹85 Lakh',
-      location: 'Jayanagar, Bangalore',
-      area: 'Jayanagar',
+      id: "6",
+      title: "Independent House with Parking",
+      price: "₹85 Lakh",
+      location: "Jayanagar, Bangalore",
+      area: "Jayanagar",
       bedrooms: 3,
       bathrooms: 2,
       sqft: 1400,
       images: [
-        'https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg?auto=compress&cs=tinysrgb&w=800'
+        "https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg?auto=compress&cs=tinysrgb&w=800",
       ],
-      type: 'buy' as const,
-      propertyType: 'Independent House',
-      amenities: ['Parking', 'Garden', 'Terrace'],
+      type: "buy" as const,
+      propertyType: "Independent House",
+      amenities: ["Parking", "Garden", "Terrace"],
       rating: 4.6,
       reviews: 19,
       isVerified: true,
-      postedBy: 'Owner',
-      postedDate: '4 days ago'
-    }
+      postedBy: "Owner",
+      postedDate: "4 days ago",
+    },
   ];
+
+  // Load properties from Firebase
+  const loadProperties = async (filters: PropertyFilters = {}) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { properties: fetchedProperties } =
+        await propertyService.getProperties(filters, { limit: 20 });
+
+      if (fetchedProperties.length === 0 && Object.keys(filters).length === 0) {
+        // If no properties found and no filters applied, use mock data as fallback
+        console.log("No properties in database, using mock data");
+        setProperties(mockProperties as Property[]);
+      } else {
+        setProperties(fetchedProperties);
+      }
+
+      setHasMore(fetchedProperties.length === 20);
+    } catch (error: any) {
+      console.error("Error loading properties:", error);
+      setError(error.message || "Failed to load properties");
+
+      // Fallback to mock data on error
+      console.log("Using mock data as fallback due to error");
+      setProperties(mockProperties as Property[]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter properties based on search parameters
   useEffect(() => {
-    const location = searchParams.get('location');
-    const propertyType = searchParams.get('propertyType');
-    const type = searchParams.get('type');
-    const budget = searchParams.get('budget');
+    const location = searchParams.get("location");
+    const propertyType = searchParams.get("propertyType");
+    const type = searchParams.get("type") as "rent" | "buy" | null;
+    const budget = searchParams.get("budget");
 
-    console.log('Search parameters:', { location, propertyType, type, budget });
+    console.log("Search parameters:", { location, propertyType, type, budget });
 
-    let filtered = [...allProperties];
+    const filters: PropertyFilters = {};
 
-    // Filter by location
     if (location) {
-      filtered = filtered.filter(property => 
-        property.location.toLowerCase().includes(location.toLowerCase()) ||
-        property.area.toLowerCase().includes(location.toLowerCase())
-      );
+      filters.location = location;
     }
 
-    // Filter by property type
     if (propertyType) {
-      filtered = filtered.filter(property => 
-        property.propertyType.toLowerCase().includes(propertyType.toLowerCase())
-      );
+      filters.propertyType = propertyType;
     }
 
-    // Filter by transaction type (rent/buy)
     if (type) {
-      filtered = filtered.filter(property => property.type === type);
+      filters.type = type;
     }
 
-    // Filter by budget (simplified logic)
-    if (budget) {
-      // This is a simplified budget filter - in a real app you'd have more sophisticated logic
-      filtered = filtered.filter(property => {
-        if (budget.includes('Under')) {
-          return true; // Show all for demo
-        }
-        return true; // Show all for demo
-      });
-    }
-
-    console.log('Filtered properties:', filtered);
-    setFilteredProperties(filtered);
+    // Load properties with filters
+    loadProperties(filters);
   }, [searchParams]);
 
+  // Initial load
+  useEffect(() => {
+    // Test database connection on component mount
+    propertyService.testConnection().then((isConnected) => {
+      if (!isConnected) {
+        console.warn("Database connection failed, using mock data");
+        setProperties(mockProperties as Property[]);
+        setLoading(false);
+      }
+    });
+  }, []);
+
   const filterOptions = {
-    propertyType: ['Apartment', 'Villa', 'Independent House', 'Studio'],
-    bhkType: ['1 RK', '1 BHK', '2 BHK', '3 BHK', '4+ BHK'],
-    budget: ['Under ₹20,000', '₹20,000 - ₹40,000', '₹40,000 - ₹60,000', 'Above ₹60,000'],
-    amenities: ['Parking', 'Gym', 'Swimming Pool', 'Garden', 'Security', 'Lift']
+    propertyType: ["Apartment", "Villa", "Independent House", "Studio"],
+    bhkType: ["1 RK", "1 BHK", "2 BHK", "3 BHK", "4+ BHK"],
+    budget: [
+      "Under ₹20,000",
+      "₹20,000 - ₹40,000",
+      "₹40,000 - ₹60,000",
+      "Above ₹60,000",
+    ],
+    amenities: [
+      "Parking",
+      "Gym",
+      "Swimming Pool",
+      "Garden",
+      "Security",
+      "Lift",
+    ],
   };
 
   const getSearchSummary = () => {
-    const location = searchParams.get('location');
-    const type = searchParams.get('type');
-    
+    const location = searchParams.get("location");
+    const type = searchParams.get("type");
+
     if (location && type) {
       return `Properties for ${type} in ${location}`;
     } else if (location) {
@@ -206,7 +258,7 @@ const PropertyListings = () => {
     } else if (type) {
       return `Properties for ${type}`;
     }
-    return 'All Properties';
+    return "All Properties";
   };
 
   return (
@@ -221,12 +273,14 @@ const PropertyListings = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Filters Sidebar */}
-          <div className={`lg:w-80 ${showFilters ? 'block' : 'hidden lg:block'}`}>
+          <div
+            className={`lg:w-80 ${showFilters ? "block" : "hidden lg:block"}`}
+          >
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-24">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
-                <button 
-                  onClick={() => window.location.href = '/properties'}
+                <button
+                  onClick={() => (window.location.href = "/properties")}
                   className="text-blue-600 text-sm font-medium"
                 >
                   Clear All
@@ -235,11 +289,16 @@ const PropertyListings = () => {
 
               {/* Property Type */}
               <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Property Type</h4>
+                <h4 className="text-sm font-medium text-gray-900 mb-3">
+                  Property Type
+                </h4>
                 <div className="space-y-2">
                   {filterOptions.propertyType.map((type) => (
                     <label key={type} className="flex items-center">
-                      <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
                       <span className="ml-2 text-sm text-gray-700">{type}</span>
                     </label>
                   ))}
@@ -248,11 +307,16 @@ const PropertyListings = () => {
 
               {/* BHK Type */}
               <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">BHK Type</h4>
+                <h4 className="text-sm font-medium text-gray-900 mb-3">
+                  BHK Type
+                </h4>
                 <div className="space-y-2">
                   {filterOptions.bhkType.map((bhk) => (
                     <label key={bhk} className="flex items-center">
-                      <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
                       <span className="ml-2 text-sm text-gray-700">{bhk}</span>
                     </label>
                   ))}
@@ -261,12 +325,19 @@ const PropertyListings = () => {
 
               {/* Budget Range */}
               <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Budget Range</h4>
+                <h4 className="text-sm font-medium text-gray-900 mb-3">
+                  Budget Range
+                </h4>
                 <div className="space-y-2">
                   {filterOptions.budget.map((budget) => (
                     <label key={budget} className="flex items-center">
-                      <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                      <span className="ml-2 text-sm text-gray-700">{budget}</span>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">
+                        {budget}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -274,12 +345,19 @@ const PropertyListings = () => {
 
               {/* Amenities */}
               <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Amenities</h4>
+                <h4 className="text-sm font-medium text-gray-900 mb-3">
+                  Amenities
+                </h4>
                 <div className="space-y-2">
                   {filterOptions.amenities.map((amenity) => (
                     <label key={amenity} className="flex items-center">
-                      <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                      <span className="ml-2 text-sm text-gray-700">{amenity}</span>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">
+                        {amenity}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -296,7 +374,9 @@ const PropertyListings = () => {
                   {getSearchSummary()}
                 </h1>
                 <p className="text-gray-600">
-                  {filteredProperties.length} properties found
+                  {loading
+                    ? "Loading..."
+                    : `${properties.length} properties found`}
                   {searchParams.toString() && (
                     <span className="ml-2 text-blue-600">
                       • Filtered results
@@ -318,21 +398,21 @@ const PropertyListings = () => {
                 {/* View Toggle */}
                 <div className="flex items-center bg-gray-100 rounded-lg p-1">
                   <button
-                    onClick={() => setViewMode('grid')}
+                    onClick={() => setViewMode("grid")}
                     className={`p-2 rounded transition-colors ${
-                      viewMode === 'grid'
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                      viewMode === "grid"
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
                     <Grid className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => setViewMode('list')}
+                    onClick={() => setViewMode("list")}
                     className={`p-2 rounded transition-colors ${
-                      viewMode === 'list'
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                      viewMode === "list"
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
                     <List className="h-4 w-4" />
@@ -350,18 +430,52 @@ const PropertyListings = () => {
               </div>
             </div>
 
+            {/* Loading State */}
+            {loading && (
+              <div className="text-center py-12">
+                <Loader2 className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Loading properties...
+                </h3>
+                <p className="text-gray-600">
+                  Please wait while we fetch the latest listings
+                </p>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !loading && (
+              <div className="text-center py-12">
+                <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="h-12 w-12 text-red-600" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Error loading properties
+                </h3>
+                <p className="text-gray-600 mb-4">{error}</p>
+                <button
+                  onClick={() => loadProperties()}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+
             {/* No Results Message */}
-            {filteredProperties.length === 0 && (
+            {!loading && !error && properties.length === 0 && (
               <div className="text-center py-12">
                 <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Search className="h-12 w-12 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No properties found</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  No properties found
+                </h3>
                 <p className="text-gray-600 mb-4">
                   Try adjusting your search criteria or browse all properties
                 </p>
                 <button
-                  onClick={() => window.location.href = '/properties'}
+                  onClick={() => (window.location.href = "/properties")}
                   className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   View All Properties
@@ -370,25 +484,27 @@ const PropertyListings = () => {
             )}
 
             {/* Properties Grid */}
-            {filteredProperties.length > 0 && (
-              <div className={`grid gap-6 ${
-                viewMode === 'grid' 
-                  ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' 
-                  : 'grid-cols-1'
-              }`}>
-                {filteredProperties.map((property) => (
+            {!loading && !error && properties.length > 0 && (
+              <div
+                className={`grid gap-6 ${
+                  viewMode === "grid"
+                    ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+                    : "grid-cols-1"
+                }`}
+              >
+                {properties.map((property) => (
                   <PropertyCard
                     key={property.id}
                     property={property}
-                    onFavorite={(id) => console.log('Favorited:', id)}
-                    onContact={(id) => console.log('Contact:', id)}
+                    onFavorite={(id) => console.log("Favorited:", id)}
+                    onContact={(id) => console.log("Contact:", id)}
                   />
                 ))}
               </div>
             )}
 
             {/* Pagination */}
-            {filteredProperties.length > 0 && (
+            {!loading && !error && properties.length > 0 && (
               <div className="flex justify-center mt-12">
                 <nav className="flex items-center space-x-2">
                   <button className="px-3 py-2 text-gray-500 hover:text-gray-700">
@@ -399,8 +515,8 @@ const PropertyListings = () => {
                       key={page}
                       className={`px-3 py-2 rounded-lg ${
                         page === 1
-                          ? 'bg-blue-600 text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
+                          ? "bg-blue-600 text-white"
+                          : "text-gray-700 hover:bg-gray-100"
                       }`}
                     >
                       {page}

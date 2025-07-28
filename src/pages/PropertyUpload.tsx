@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import FileUpload from '../components/FileUpload';
-import { useFileUpload } from '../hooks/useFileUpload';
-import { 
-  Save, 
-  Eye, 
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import FileUpload from "../components/FileUpload";
+import { useFileUpload } from "../hooks/useFileUpload";
+import { useAuth } from "../contexts/AuthContext";
+import {
+  Save,
+  Eye,
   ArrowLeft,
   CheckCircle,
   AlertTriangle,
-  Upload as UploadIcon
-} from 'lucide-react';
+  Upload as UploadIcon,
+} from "lucide-react";
 
 interface PropertyFormData {
   title: string;
@@ -25,17 +26,18 @@ interface PropertyFormData {
 
 const PropertyUpload: React.FC = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [propertyId] = useState(() => `prop_${Date.now()}`);
   const [formData, setFormData] = useState<PropertyFormData>({
-    title: '',
-    description: '',
-    propertyType: '',
-    price: '',
-    location: '',
+    title: "",
+    description: "",
+    propertyType: "",
+    price: "",
+    location: "",
     bedrooms: 1,
     bathrooms: 1,
     sqft: 0,
-    amenities: []
+    amenities: [],
   });
 
   const {
@@ -44,24 +46,24 @@ const PropertyUpload: React.FC = () => {
     uploadFiles,
     removeFile,
     getUploadStats,
-    canUploadMore
+    canUploadMore,
   } = useFileUpload({
     propertyId,
     maxFiles: 15,
     onUploadComplete: (file) => {
-      console.log('File uploaded successfully:', file.name);
+      console.log("File uploaded successfully:", file.name);
     },
     onUploadError: (error, fileName) => {
       console.error(`Upload failed for ${fileName}:`, error.message);
-    }
+    },
   });
 
   const stats = getUploadStats();
 
   const handleInputChange = (field: keyof PropertyFormData, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -72,51 +74,88 @@ const PropertyUpload: React.FC = () => {
   const handleSaveDraft = () => {
     const draftData = {
       ...formData,
-      files: files.filter(f => f.status === 'completed'),
+      files: files.filter((f) => f.status === "completed"),
       propertyId,
-      savedAt: new Date().toISOString()
+      savedAt: new Date().toISOString(),
     };
-    
-    localStorage.setItem(`property_draft_${propertyId}`, JSON.stringify(draftData));
-    alert('Draft saved successfully!');
+
+    localStorage.setItem(
+      `property_draft_${propertyId}`,
+      JSON.stringify(draftData),
+    );
+    alert("Draft saved successfully!");
   };
 
   const handlePreview = () => {
     // In a real app, this would open a preview modal or navigate to a preview page
-    console.log('Preview property:', { ...formData, files });
-    alert('Preview functionality would open here');
+    console.log("Preview property:", { ...formData, files });
+    alert("Preview functionality would open here");
   };
 
   const handleSubmit = async () => {
     if (stats.uploading > 0) {
-      alert('Please wait for all files to finish uploading before submitting.');
+      alert("Please wait for all files to finish uploading before submitting.");
       return;
     }
 
     if (stats.errors > 0) {
-      alert('Please resolve upload errors before submitting.');
+      alert("Please resolve upload errors before submitting.");
       return;
     }
 
-    const propertyData = {
-      ...formData,
-      files: files.filter(f => f.status === 'completed'),
-      propertyId,
-      createdAt: new Date().toISOString()
-    };
+    // Validate required fields
+    if (
+      !formData.title ||
+      !formData.description ||
+      !formData.propertyType ||
+      !formData.price ||
+      !formData.location
+    ) {
+      alert("Please fill in all required fields.");
+      return;
+    }
 
     try {
-      // In a real app, this would submit to your backend API
-      console.log('Submitting property:', propertyData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      alert('Property submitted successfully!');
-      navigate('/properties');
-    } catch (error) {
-      console.error('Failed to submit property:', error);
-      alert('Failed to submit property. Please try again.');
+      // Import propertyService dynamically to avoid circular dependencies
+      const { propertyService } = await import("../services/propertyService");
+      const { useAuth } = await import("../contexts/AuthContext");
+
+      // Get current user from auth context
+      const currentUserId = currentUser?.uid || "anonymous-user";
+
+      const propertyData = {
+        title: formData.title,
+        description: formData.description,
+        propertyType: formData.propertyType,
+        price: formData.price,
+        location: formData.location,
+        area: formData.location, // You might want to separate area from location
+        bedrooms: formData.bedrooms,
+        bathrooms: formData.bathrooms,
+        sqft: formData.sqft,
+        amenities: formData.amenities,
+        images: files
+          .filter((f) => f.status === "completed")
+          .map((f) => f.url || ""),
+        type: "rent" as const, // You might want to add this to your form
+        isVerified: false,
+        postedBy: "Owner", // You might want to add this to your form
+        postedDate: new Date().toLocaleDateString(),
+        ownerId: currentUserId,
+        status: "active" as const,
+      };
+
+      console.log("Submitting property to Firebase:", propertyData);
+
+      const propertyId = await propertyService.createProperty(propertyData);
+
+      alert("Property submitted successfully!");
+      navigate("/properties");
+    } catch (error: any) {
+      console.error("Failed to submit property:", error);
+      alert(
+        `Failed to submit property: ${error.message || "Please try again."}`,
+      );
     }
   };
 
@@ -133,8 +172,12 @@ const PropertyUpload: React.FC = () => {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Upload Property</h1>
-              <p className="text-gray-600 mt-1">Add photos and details for your property listing</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Upload Property
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Add photos and details for your property listing
+              </p>
             </div>
           </div>
 
@@ -163,23 +206,31 @@ const PropertyUpload: React.FC = () => {
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <UploadIcon className="h-5 w-5 text-blue-600" />
-                  <span className="font-medium text-gray-900">Upload Status</span>
+                  <span className="font-medium text-gray-900">
+                    Upload Status
+                  </span>
                 </div>
                 <div className="flex items-center space-x-4 text-sm">
                   <div className="flex items-center space-x-1">
                     <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-green-600">{stats.completed} completed</span>
+                    <span className="text-green-600">
+                      {stats.completed} completed
+                    </span>
                   </div>
                   {stats.uploading > 0 && (
                     <div className="flex items-center space-x-1">
                       <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-blue-600">{stats.uploading} uploading</span>
+                      <span className="text-blue-600">
+                        {stats.uploading} uploading
+                      </span>
                     </div>
                   )}
                   {stats.errors > 0 && (
                     <div className="flex items-center space-x-1">
                       <AlertTriangle className="h-4 w-4 text-red-600" />
-                      <span className="text-red-600">{stats.errors} errors</span>
+                      <span className="text-red-600">
+                        {stats.errors} errors
+                      </span>
                     </div>
                   )}
                 </div>
@@ -196,14 +247,21 @@ const PropertyUpload: React.FC = () => {
           <div className="lg:col-span-2 space-y-8">
             {/* File Upload Section */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Property Photos & Documents</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Property Photos & Documents
+              </h2>
               <FileUpload
                 propertyId={propertyId}
                 maxFiles={15}
                 maxFileSize={10}
-                acceptedTypes={['image/jpeg', 'image/png', 'image/webp', 'application/pdf']}
+                acceptedTypes={[
+                  "image/jpeg",
+                  "image/png",
+                  "image/webp",
+                  "application/pdf",
+                ]}
                 onFilesChange={(updatedFiles) => {
-                  console.log('Files updated:', updatedFiles);
+                  console.log("Files updated:", updatedFiles);
                 }}
                 existingFiles={files}
               />
@@ -211,8 +269,10 @@ const PropertyUpload: React.FC = () => {
 
             {/* Property Details Form */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">Property Details</h2>
-              
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                Property Details
+              </h2>
+
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -221,7 +281,7 @@ const PropertyUpload: React.FC = () => {
                   <input
                     type="text"
                     value={formData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
+                    onChange={(e) => handleInputChange("title", e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter a descriptive title for your property"
                   />
@@ -233,7 +293,9 @@ const PropertyUpload: React.FC = () => {
                   </label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("description", e.target.value)
+                    }
                     rows={4}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Describe your property, its features, and nearby amenities"
@@ -247,7 +309,9 @@ const PropertyUpload: React.FC = () => {
                     </label>
                     <select
                       value={formData.propertyType}
-                      onChange={(e) => handleInputChange('propertyType', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("propertyType", e.target.value)
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">Select type</option>
@@ -265,7 +329,9 @@ const PropertyUpload: React.FC = () => {
                     <input
                       type="text"
                       value={formData.price}
-                      onChange={(e) => handleInputChange('price', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("price", e.target.value)
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="₹50,000/month"
                     />
@@ -278,7 +344,9 @@ const PropertyUpload: React.FC = () => {
                     <input
                       type="text"
                       value={formData.location}
-                      onChange={(e) => handleInputChange('location', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("location", e.target.value)
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="City, Area"
                     />
@@ -291,7 +359,9 @@ const PropertyUpload: React.FC = () => {
                     <input
                       type="number"
                       value={formData.sqft}
-                      onChange={(e) => handleInputChange('sqft', parseInt(e.target.value))}
+                      onChange={(e) =>
+                        handleInputChange("sqft", parseInt(e.target.value))
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="1200"
                     />
@@ -303,11 +373,15 @@ const PropertyUpload: React.FC = () => {
                     </label>
                     <select
                       value={formData.bedrooms}
-                      onChange={(e) => handleInputChange('bedrooms', parseInt(e.target.value))}
+                      onChange={(e) =>
+                        handleInputChange("bedrooms", parseInt(e.target.value))
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      {[1, 2, 3, 4, 5].map(num => (
-                        <option key={num} value={num}>{num} Bedroom{num > 1 ? 's' : ''}</option>
+                      {[1, 2, 3, 4, 5].map((num) => (
+                        <option key={num} value={num}>
+                          {num} Bedroom{num > 1 ? "s" : ""}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -318,11 +392,15 @@ const PropertyUpload: React.FC = () => {
                     </label>
                     <select
                       value={formData.bathrooms}
-                      onChange={(e) => handleInputChange('bathrooms', parseInt(e.target.value))}
+                      onChange={(e) =>
+                        handleInputChange("bathrooms", parseInt(e.target.value))
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      {[1, 2, 3, 4, 5].map(num => (
-                        <option key={num} value={num}>{num} Bathroom{num > 1 ? 's' : ''}</option>
+                      {[1, 2, 3, 4, 5].map((num) => (
+                        <option key={num} value={num}>
+                          {num} Bathroom{num > 1 ? "s" : ""}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -335,7 +413,9 @@ const PropertyUpload: React.FC = () => {
           <div className="space-y-6">
             {/* Quick Stats */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload Summary</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Upload Summary
+              </h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Total Files:</span>
@@ -343,22 +423,30 @@ const PropertyUpload: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Completed:</span>
-                  <span className="font-medium text-green-600">{stats.completed}</span>
+                  <span className="font-medium text-green-600">
+                    {stats.completed}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Uploading:</span>
-                  <span className="font-medium text-blue-600">{stats.uploading}</span>
+                  <span className="font-medium text-blue-600">
+                    {stats.uploading}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Errors:</span>
-                  <span className="font-medium text-red-600">{stats.errors}</span>
+                  <span className="font-medium text-red-600">
+                    {stats.errors}
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Tips */}
             <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
-              <h3 className="text-lg font-semibold text-blue-900 mb-4">Upload Tips</h3>
+              <h3 className="text-lg font-semibold text-blue-900 mb-4">
+                Upload Tips
+              </h3>
               <ul className="space-y-2 text-sm text-blue-800">
                 <li>• Upload high-quality images for better visibility</li>
                 <li>• Include photos of all rooms and amenities</li>
@@ -374,11 +462,11 @@ const PropertyUpload: React.FC = () => {
               disabled={isUploading || stats.errors > 0}
               className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
                 isUploading || stats.errors > 0
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-blue-600 text-white hover:bg-blue-700"
               }`}
             >
-              {isUploading ? 'Uploading...' : 'Submit Property'}
+              {isUploading ? "Uploading..." : "Submit Property"}
             </button>
           </div>
         </div>
