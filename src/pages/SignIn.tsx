@@ -1,71 +1,82 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  Eye, 
-  EyeOff, 
-  Mail, 
-  Lock, 
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
   Phone,
   AlertCircle,
   Loader2,
   Home,
-  ArrowLeft
-} from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { validateEmail, validatePassword, sanitizeInput, RateLimiter } from '../utils/validation';
-import { setupRecaptcha } from '../config/firebase';
+  ArrowLeft,
+} from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import {
+  validateEmail,
+  validatePassword,
+  sanitizeInput,
+  RateLimiter,
+} from "../utils/validation";
+import { setupRecaptcha } from "../config/firebase";
 
 const SignIn: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, signInWithGoogle, signInWithGoogleRedirect, signInWithPhone, confirmPhoneSignIn } = useAuth();
-  
-  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
+  const {
+    signIn,
+    signInWithGoogle,
+    signInWithGoogleRedirect,
+    signInWithPhone,
+    confirmPhoneSignIn,
+  } = useAuth();
+
+  const [authMethod, setAuthMethod] = useState<"email" | "phone">("email");
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    phoneNumber: '',
-    verificationCode: '',
-    rememberMe: false
+    email: "",
+    password: "",
+    phoneNumber: "",
+    verificationCode: "",
+    rememberMe: false,
   });
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [phoneStep, setPhoneStep] = useState<'phone' | 'verification'>('phone');
+  const [phoneStep, setPhoneStep] = useState<"phone" | "verification">("phone");
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [rateLimiter] = useState(() => new RateLimiter(5, 15 * 60 * 1000));
 
   // Redirect if already authenticated
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from?.pathname || "/";
 
   useEffect(() => {
     // Setup reCAPTCHA for phone authentication
-    if (authMethod === 'phone') {
+    if (authMethod === "phone") {
       try {
-        window.recaptchaVerifier = setupRecaptcha('recaptcha-container');
+        window.recaptchaVerifier = setupRecaptcha("recaptcha-container");
       } catch (error) {
-        console.error('reCAPTCHA setup error:', error);
+        console.error("reCAPTCHA setup error:", error);
       }
     }
   }, [authMethod]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: typeof value === 'string' ? sanitizeInput(value) : value
+      [field]: typeof value === "string" ? sanitizeInput(value) : value,
     }));
-    
+
     // Clear field-specific errors
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (authMethod === 'email') {
+    if (authMethod === "email") {
       const emailValidation = validateEmail(formData.email);
       if (!emailValidation.isValid) {
         newErrors.email = emailValidation.errors[0];
@@ -77,11 +88,22 @@ const SignIn: React.FC = () => {
       }
     } else {
       if (!formData.phoneNumber) {
-        newErrors.phoneNumber = 'Phone number is required';
+        newErrors.phoneNumber = "Phone number is required";
+      } else {
+        // Basic phone number format validation
+        const cleanPhone = formData.phoneNumber.replace(/[^\d+]/g, "");
+        if (!cleanPhone.startsWith("+") && cleanPhone.length < 10) {
+          newErrors.phoneNumber =
+            "Please enter a valid phone number with country code";
+        }
       }
-      
-      if (phoneStep === 'verification' && !formData.verificationCode) {
-        newErrors.verificationCode = 'Verification code is required';
+
+      if (phoneStep === "verification") {
+        if (!formData.verificationCode) {
+          newErrors.verificationCode = "Verification code is required";
+        } else if (formData.verificationCode.length !== 6) {
+          newErrors.verificationCode = "Verification code must be 6 digits";
+        }
       }
     }
 
@@ -91,14 +113,18 @@ const SignIn: React.FC = () => {
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     // Rate limiting
     const identifier = formData.email;
     if (!rateLimiter.isAllowed(identifier)) {
-      const remainingTime = Math.ceil(rateLimiter.getRemainingTime(identifier) / 60000);
-      setErrors({ general: `Too many attempts. Please try again in ${remainingTime} minutes.` });
+      const remainingTime = Math.ceil(
+        rateLimiter.getRemainingTime(identifier) / 60000,
+      );
+      setErrors({
+        general: `Too many attempts. Please try again in ${remainingTime} minutes.`,
+      });
       return;
     }
 
@@ -109,30 +135,30 @@ const SignIn: React.FC = () => {
       await signIn(formData.email, formData.password, formData.rememberMe);
       navigate(from, { replace: true });
     } catch (error: any) {
-      console.error('Sign in error:', error);
-      
-      let errorMessage = 'An error occurred during sign in';
-      
+      console.error("Sign in error:", error);
+
+      let errorMessage = "An error occurred during sign in";
+
       switch (error.code) {
-        case 'auth/user-not-found':
-          errorMessage = 'No account found with this email address';
+        case "auth/user-not-found":
+          errorMessage = "No account found with this email address";
           break;
-        case 'auth/wrong-password':
-          errorMessage = 'Incorrect password';
+        case "auth/wrong-password":
+          errorMessage = "Incorrect password";
           break;
-        case 'auth/invalid-email':
-          errorMessage = 'Invalid email address';
+        case "auth/invalid-email":
+          errorMessage = "Invalid email address";
           break;
-        case 'auth/user-disabled':
-          errorMessage = 'This account has been disabled';
+        case "auth/user-disabled":
+          errorMessage = "This account has been disabled";
           break;
-        case 'auth/too-many-requests':
-          errorMessage = 'Too many failed attempts. Please try again later';
+        case "auth/too-many-requests":
+          errorMessage = "Too many failed attempts. Please try again later";
           break;
         default:
           errorMessage = error.message || errorMessage;
       }
-      
+
       setErrors({ general: errorMessage });
     } finally {
       setIsLoading(false);
@@ -148,22 +174,25 @@ const SignIn: React.FC = () => {
       await signInWithGoogle();
       navigate(from, { replace: true });
     } catch (error: any) {
-      console.error('Google sign in error:', error);
-      
+      console.error("Google sign in error:", error);
+
       // If popup is blocked, fall back to redirect method
-      if (error.code === 'auth/popup-blocked') {
+      if (error.code === "auth/popup-blocked") {
         try {
           // Use redirect method as fallback
           await signInWithGoogleRedirect();
           // Note: redirect will handle navigation automatically
         } catch (redirectError: any) {
-          console.error('Google redirect sign in error:', redirectError);
-          setErrors({ 
-            general: 'Unable to sign in with Google. Please try again or use email sign in.' 
+          console.error("Google redirect sign in error:", redirectError);
+          setErrors({
+            general:
+              "Unable to sign in with Google. Please try again or use email sign in.",
           });
         }
       } else {
-        setErrors({ general: error.message || 'Failed to sign in with Google' });
+        setErrors({
+          general: error.message || "Failed to sign in with Google",
+        });
       }
     } finally {
       setIsLoading(false);
@@ -172,40 +201,40 @@ const SignIn: React.FC = () => {
 
   const handlePhoneSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
     setErrors({});
 
     try {
-      if (phoneStep === 'phone') {
+      if (phoneStep === "phone") {
         const result = await signInWithPhone(formData.phoneNumber);
         setConfirmationResult(result);
-        setPhoneStep('verification');
+        setPhoneStep("verification");
       } else {
         await confirmPhoneSignIn(confirmationResult, formData.verificationCode);
         navigate(from, { replace: true });
       }
     } catch (error: any) {
-      console.error('Phone sign in error:', error);
-      
-      let errorMessage = 'Phone authentication failed';
-      
+      console.error("Phone sign in error:", error);
+
+      let errorMessage = "Phone authentication failed";
+
       switch (error.code) {
-        case 'auth/invalid-phone-number':
-          errorMessage = 'Invalid phone number format';
+        case "auth/invalid-phone-number":
+          errorMessage = "Invalid phone number format";
           break;
-        case 'auth/too-many-requests':
-          errorMessage = 'Too many requests. Please try again later';
+        case "auth/too-many-requests":
+          errorMessage = "Too many requests. Please try again later";
           break;
-        case 'auth/invalid-verification-code':
-          errorMessage = 'Invalid verification code';
+        case "auth/invalid-verification-code":
+          errorMessage = "Invalid verification code";
           break;
         default:
           errorMessage = error.message || errorMessage;
       }
-      
+
       setErrors({ general: errorMessage });
     } finally {
       setIsLoading(false);
@@ -213,9 +242,9 @@ const SignIn: React.FC = () => {
   };
 
   const resendVerificationCode = async () => {
-    if (phoneStep === 'verification') {
-      setPhoneStep('phone');
-      setFormData(prev => ({ ...prev, verificationCode: '' }));
+    if (phoneStep === "verification") {
+      setPhoneStep("phone");
+      setFormData((prev) => ({ ...prev, verificationCode: "" }));
     }
   };
 
@@ -224,41 +253,46 @@ const SignIn: React.FC = () => {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <Link to="/" className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 mb-6">
+          <Link
+            to="/"
+            className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 mb-6"
+          >
             <ArrowLeft className="h-4 w-4" />
             <span>Back to Home</span>
           </Link>
-          
+
           <div className="flex items-center justify-center space-x-2 mb-6">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
               <Home className="h-6 w-6 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900">PropertyHub</h1>
           </div>
-          
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h2>
+
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            Welcome back
+          </h2>
           <p className="text-gray-600">Sign in to your account to continue</p>
         </div>
 
         {/* Auth Method Toggle */}
         <div className="flex bg-gray-100 rounded-lg p-1">
           <button
-            onClick={() => setAuthMethod('email')}
+            onClick={() => setAuthMethod("email")}
             className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-md transition-colors ${
-              authMethod === 'email'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+              authMethod === "email"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
             }`}
           >
             <Mail className="h-4 w-4" />
             <span>Email</span>
           </button>
           <button
-            onClick={() => setAuthMethod('phone')}
+            onClick={() => setAuthMethod("phone")}
             className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-md transition-colors ${
-              authMethod === 'phone'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+              authMethod === "phone"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
             }`}
           >
             <Phone className="h-4 w-4" />
@@ -275,10 +309,13 @@ const SignIn: React.FC = () => {
         )}
 
         {/* Email Sign In Form */}
-        {authMethod === 'email' && (
+        {authMethod === "email" && (
           <form onSubmit={handleEmailSignIn} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Email Address
               </label>
               <div className="relative">
@@ -287,9 +324,11 @@ const SignIn: React.FC = () => {
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
                   className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                    errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    errors.email
+                      ? "border-red-300 bg-red-50"
+                      : "border-gray-300"
                   }`}
                   placeholder="Enter your email"
                   disabled={isLoading}
@@ -301,18 +340,25 @@ const SignIn: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Password
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("password", e.target.value)
+                  }
                   className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                    errors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    errors.password
+                      ? "border-red-300 bg-red-50"
+                      : "border-gray-300"
                   }`}
                   placeholder="Enter your password"
                   disabled={isLoading}
@@ -322,7 +368,11 @@ const SignIn: React.FC = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
                 </button>
               </div>
               {errors.password && (
@@ -335,12 +385,14 @@ const SignIn: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={formData.rememberMe}
-                  onChange={(e) => handleInputChange('rememberMe', e.target.checked)}
+                  onChange={(e) =>
+                    handleInputChange("rememberMe", e.target.checked)
+                  }
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="ml-2 text-sm text-gray-700">Remember me</span>
               </label>
-              
+
               <Link
                 to="/forgot-password"
                 className="text-sm text-blue-600 hover:text-blue-700 font-medium"
@@ -367,11 +419,14 @@ const SignIn: React.FC = () => {
         )}
 
         {/* Phone Sign In Form */}
-        {authMethod === 'phone' && (
+        {authMethod === "phone" && (
           <form onSubmit={handlePhoneSignIn} className="space-y-6">
-            {phoneStep === 'phone' ? (
+            {phoneStep === "phone" ? (
               <div>
-                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="phoneNumber"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Phone Number
                 </label>
                 <div className="relative">
@@ -380,39 +435,55 @@ const SignIn: React.FC = () => {
                     id="phoneNumber"
                     type="tel"
                     value={formData.phoneNumber}
-                    onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("phoneNumber", e.target.value)
+                    }
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                      errors.phoneNumber ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      errors.phoneNumber
+                        ? "border-red-300 bg-red-50"
+                        : "border-gray-300"
                     }`}
-                    placeholder="+1 (555) 123-4567"
+                    placeholder="+1 (555) 123-4567 or 5551234567"
                     disabled={isLoading}
                   />
                 </div>
                 {errors.phoneNumber && (
-                  <p className="mt-1 text-sm text-red-600">{errors.phoneNumber}</p>
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.phoneNumber}
+                  </p>
                 )}
                 <p className="mt-2 text-sm text-gray-600">
-                  We'll send you a verification code via SMS
+                  Enter your phone number with country code (e.g., +1 for US).
+                  We'll send you a verification code via SMS.
                 </p>
               </div>
             ) : (
               <div>
-                <label htmlFor="verificationCode" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="verificationCode"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Verification Code
                 </label>
                 <input
                   id="verificationCode"
                   type="text"
                   value={formData.verificationCode}
-                  onChange={(e) => handleInputChange('verificationCode', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("verificationCode", e.target.value)
+                  }
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                    errors.verificationCode ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    errors.verificationCode
+                      ? "border-red-300 bg-red-50"
+                      : "border-gray-300"
                   }`}
                   placeholder="Enter 6-digit code"
                   disabled={isLoading}
                 />
                 {errors.verificationCode && (
-                  <p className="mt-1 text-sm text-red-600">{errors.verificationCode}</p>
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.verificationCode}
+                  </p>
                 )}
                 <div className="mt-2 flex items-center justify-between">
                   <p className="text-sm text-gray-600">
@@ -438,12 +509,12 @@ const SignIn: React.FC = () => {
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span>
-                    {phoneStep === 'phone' ? 'Sending code...' : 'Verifying...'}
+                    {phoneStep === "phone" ? "Sending code..." : "Verifying..."}
                   </span>
                 </>
               ) : (
                 <span>
-                  {phoneStep === 'phone' ? 'Send Code' : 'Verify & Sign In'}
+                  {phoneStep === "phone" ? "Send Code" : "Verify & Sign In"}
                 </span>
               )}
             </button>
@@ -456,7 +527,9 @@ const SignIn: React.FC = () => {
             <div className="w-full border-t border-gray-300" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">Or continue with</span>
+            <span className="px-2 bg-white text-gray-500">
+              Or continue with
+            </span>
           </div>
         </div>
 
@@ -490,7 +563,7 @@ const SignIn: React.FC = () => {
         {/* Sign Up Link */}
         <div className="text-center">
           <p className="text-gray-600">
-            Don't have an account?{' '}
+            Don't have an account?{" "}
             <Link
               to="/signup"
               className="text-blue-600 hover:text-blue-700 font-medium"

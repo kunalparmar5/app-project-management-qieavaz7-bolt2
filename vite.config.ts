@@ -1,11 +1,20 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { tempo } from "tempo-devtools/dist/vite";
+import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tempo()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
   server: {
-    host: 'localhost',
-    port: 5173
-  }
+    host: "localhost",
+    port: 5173,
+    // @ts-ignore
+    allowedHosts: process.env.TEMPO === "true" ? true : undefined,
+  },
 });
