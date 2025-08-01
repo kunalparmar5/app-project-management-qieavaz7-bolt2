@@ -175,62 +175,72 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user: User,
     additionalData?: any,
   ): Promise<UserProfile> => {
-    const userRef = doc(db, "users", user.uid);
-    const userSnap = await getDoc(userRef);
+    try {
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
 
-    if (!userSnap.exists()) {
-      const { displayName, email, phoneNumber, photoURL } = user;
-      const createdAt = new Date();
+      if (!userSnap.exists()) {
+        const { displayName, email, phoneNumber, photoURL } = user;
+        const createdAt = new Date();
 
-      const newProfile: UserProfile = {
-        uid: user.uid,
-        email: email || "",
-        displayName: displayName || "",
-        phoneNumber: phoneNumber || undefined,
-        photoURL: photoURL || undefined,
-        createdAt,
-        lastLoginAt: createdAt,
-        emailVerified: user.emailVerified,
-        preferences: {
-          notifications: true,
-          marketing: false,
-          rememberMe: false,
-        },
-        profile: {
-          firstName: displayName?.split(" ")[0] || "",
-          lastName: displayName?.split(" ").slice(1).join(" ") || "",
-        },
-        propertyPreferences: {
-          propertyType: [],
-          budget: { min: 0, max: 0 },
-          location: [],
-          amenities: [],
-        },
-        savedProperties: [],
-        viewedProperties: [],
-        role: "user",
-        isActive: true,
-        ...additionalData,
-      };
+        const newProfile: UserProfile = {
+          uid: user.uid,
+          email: email || "",
+          displayName: displayName || "",
+          phoneNumber: phoneNumber || undefined,
+          photoURL: photoURL || undefined,
+          createdAt,
+          lastLoginAt: createdAt,
+          emailVerified: user.emailVerified,
+          preferences: {
+            notifications: true,
+            marketing: false,
+            rememberMe: false,
+          },
+          profile: {
+            firstName: displayName?.split(" ")[0] || "",
+            lastName: displayName?.split(" ").slice(1).join(" ") || "",
+          },
+          propertyPreferences: {
+            propertyType: [],
+            budget: { min: 0, max: 0 },
+            location: [],
+            amenities: [],
+          },
+          savedProperties: [],
+          viewedProperties: [],
+          role: "user",
+          isActive: true,
+          ...additionalData,
+        };
 
-      try {
-        await setDoc(userRef, newProfile);
-        return newProfile;
-      } catch (error) {
-        console.error("Error creating user profile:", error);
-        throw error;
+        try {
+          await setDoc(userRef, newProfile);
+          return newProfile;
+        } catch (error) {
+          const firebaseError = handleFirebaseError(error, "create user profile");
+          throw firebaseError;
+        }
+      } else {
+        // Update last login time
+        const existingProfile = userSnap.data() as UserProfile;
+        const updatedProfile = {
+          ...existingProfile,
+          lastLoginAt: new Date(),
+          emailVerified: user.emailVerified,
+        };
+
+        try {
+          await setDoc(userRef, updatedProfile, { merge: true });
+          return updatedProfile;
+        } catch (error) {
+          const firebaseError = handleFirebaseError(error, "update user profile");
+          throw firebaseError;
+        }
       }
-    } else {
-      // Update last login time
-      const existingProfile = userSnap.data() as UserProfile;
-      const updatedProfile = {
-        ...existingProfile,
-        lastLoginAt: new Date(),
-        emailVerified: user.emailVerified,
-      };
-
-      await setDoc(userRef, updatedProfile, { merge: true });
-      return updatedProfile;
+    } catch (error) {
+      const firebaseError = handleFirebaseError(error, "get user profile");
+      throw firebaseError;
     }
   };
 
