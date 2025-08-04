@@ -20,10 +20,34 @@ import ServicesMenu from './ServicesMenu';
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isLocationMenuOpen, setIsLocationMenuOpen] = useState(false);
+  const [selectedCity, setSelectedCity] = useState('Mumbai');
   const location = useLocation();
   const navigate = useNavigate();
   const { currentUser, userProfile, logout } = useAuth();
 
+  const cities = [
+    'Mumbai',
+    'Delhi',
+    'Bangalore',
+    'Hyderabad',
+    'Chennai',
+    'Kolkata',
+    'Pune',
+    'Ahmedabad',
+    'Jaipur',
+    'Surat',
+    'Lucknow',
+    'Kanpur',
+    'Nagpur',
+    'Indore',
+    'Thane',
+    'Bhopal',
+    'Visakhapatnam',
+    'Pimpri-Chinchwad',
+    'Patna',
+    'Vadodara'
+  ];
   const navigation = [
     { name: 'Buy', href: '/properties?type=buy', current: false },
     { name: 'Rent', href: '/properties?type=rent', current: false },
@@ -42,6 +66,20 @@ const Header = () => {
     }
   };
 
+  const handleCitySelect = (city: string) => {
+    setSelectedCity(city);
+    setIsLocationMenuOpen(false);
+    
+    // Update URL with selected city
+    const currentPath = location.pathname;
+    if (currentPath === '/properties') {
+      const searchParams = new URLSearchParams(location.search);
+      searchParams.set('location', city);
+      navigate(`${currentPath}?${searchParams.toString()}`);
+    } else {
+      navigate(`/properties?location=${encodeURIComponent(city)}`);
+    }
+  };
   const getUserInitials = () => {
     if (userProfile?.displayName) {
       return userProfile.displayName
@@ -87,10 +125,43 @@ const Header = () => {
           {/* Right Section */}
           <div className="flex items-center space-x-4">
             {/* Location Selector */}
-            <div className="hidden lg:flex items-center space-x-1 text-gray-600 hover:text-gray-900 cursor-pointer">
-              <MapPin className="h-4 w-4" />
-              <span className="text-sm">Mumbai</span>
-              <ChevronDown className="h-4 w-4" />
+            <div className="hidden lg:block relative">
+              <button
+                onClick={() => setIsLocationMenuOpen(!isLocationMenuOpen)}
+                className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 cursor-pointer px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <MapPin className="h-4 w-4" />
+                <span className="text-sm font-medium">{selectedCity}</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${isLocationMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isLocationMenuOpen && (
+                <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 max-h-80 overflow-y-auto">
+                  <div className="px-3 py-2 border-b border-gray-200">
+                    <p className="text-sm font-medium text-gray-900">Select City</p>
+                  </div>
+                  <div className="py-1">
+                    {cities.map((city) => (
+                      <button
+                        key={city}
+                        onClick={() => handleCitySelect(city)}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                          selectedCity === city
+                            ? 'text-blue-600 bg-blue-50 font-medium'
+                            : 'text-gray-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{city}</span>
+                          {selectedCity === city && (
+                            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Search Icon for Mobile */}
@@ -223,6 +294,41 @@ const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden border-t border-gray-200 py-4">
             <div className="space-y-1">
+              {/* Mobile Location Selector */}
+              <div className="px-3 py-2">
+                <button
+                  onClick={() => setIsLocationMenuOpen(!isLocationMenuOpen)}
+                  className="flex items-center justify-between w-full text-left text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg"
+                >
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-5 w-5" />
+                    <span>{selectedCity}</span>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isLocationMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {isLocationMenuOpen && (
+                  <div className="mt-2 ml-4 space-y-1 max-h-48 overflow-y-auto">
+                    {cities.map((city) => (
+                      <button
+                        key={city}
+                        onClick={() => {
+                          handleCitySelect(city);
+                          setIsMenuOpen(false);
+                        }}
+                        className={`block w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
+                          selectedCity === city
+                            ? 'text-blue-600 bg-blue-50 font-medium'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        }`}
+                      >
+                        {city}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
               {navigation.map((item) => (
                 <Link
                   key={item.name}
@@ -267,6 +373,17 @@ const Header = () => {
           </div>
         )}
       </div>
+      
+      {/* Overlay to close dropdowns when clicking outside */}
+      {(isLocationMenuOpen || isUserMenuOpen) && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => {
+            setIsLocationMenuOpen(false);
+            setIsUserMenuOpen(false);
+          }}
+        />
+      )}
     </header>
   );
 };
