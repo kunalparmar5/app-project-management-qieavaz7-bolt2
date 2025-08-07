@@ -5,7 +5,6 @@ import {
   Search, 
   Menu, 
   X, 
-  User, 
   Heart,
   Bell,
   ChevronDown,
@@ -20,6 +19,7 @@ import ServicesMenu from './ServicesMenu';
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
   const [isLocationMenuOpen, setIsLocationMenuOpen] = useState(false);
   const [selectedCity, setSelectedCity] = useState('Mumbai');
   const location = useLocation();
@@ -172,10 +172,62 @@ const Header = () => {
             {currentUser ? (
               <>
                 {/* Notifications */}
-                <button className="hidden md:block relative p-2 text-gray-600 hover:text-gray-900">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setIsNotificationMenuOpen(!isNotificationMenuOpen)}
+                    className="hidden md:block relative p-2 text-gray-600 hover:text-gray-900"
+                  >
+                    <Bell className="h-5 w-5" />
+                    <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
+                  </button>
+                  {isNotificationMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                      <div className="px-4 py-3 border-b border-gray-200">
+                        <p className="text-sm font-medium text-gray-900">
+                          Notifications
+                        </p>
+                      </div>
+                      <div className="py-1">
+                        <a
+                          href="#"
+                          className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          <div className="w-full">
+                            <p className="text-gray-900 font-medium">New message</p>
+                            <p className="text-gray-500 text-xs">
+                              You have a new message from John Doe.
+                            </p>
+                            <p className="text-blue-500 text-xs mt-1">
+                              2 minutes ago
+                            </p>
+                          </div>
+                        </a>
+                        <a
+                          href="#"
+                          className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          <div className="w-full">
+                            <p className="text-gray-900 font-medium">Property Alert</p>
+                            <p className="text-gray-500 text-xs">
+                              A new property matching your criteria is available.
+                            </p>
+                            <p className="text-blue-500 text-xs mt-1">
+                              1 hour ago
+                            </p>
+                          </div>
+                        </a>
+                      </div>
+                      <div className="border-t border-gray-200">
+                        <a
+                          href="#"
+                          className="block w-full px-4 py-2 text-sm text-center text-blue-600 hover:bg-gray-50"
+                        >
+                          View all notifications
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Favorites */}
                 <button className="hidden md:block p-2 text-gray-600 hover:text-gray-900">
@@ -375,12 +427,13 @@ const Header = () => {
       </div>
       
       {/* Overlay to close dropdowns when clicking outside */}
-      {(isLocationMenuOpen || isUserMenuOpen) && (
+      {(isLocationMenuOpen || isUserMenuOpen || isNotificationMenuOpen) && (
         <div
           className="fixed inset-0 z-40"
           onClick={() => {
             setIsLocationMenuOpen(false);
             setIsUserMenuOpen(false);
+            setIsNotificationMenuOpen(false);
           }}
         />
       )}

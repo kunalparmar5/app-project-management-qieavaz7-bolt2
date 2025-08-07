@@ -24,7 +24,7 @@ export const uploadFile = async (
   propertyId: string,
   onProgress?: (progress: number) => void
 ): Promise<UploadResponse> => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     // Simulate upload progress
     let progress = 0;
     const interval = setInterval(() => {
@@ -57,7 +57,7 @@ export const uploadFile = async (
 };
 
 // Delete uploaded file
-export const deleteFile = async (fileId: string): Promise<{ success: boolean }> => {
+export const deleteFile = async (_fileId: string): Promise<{ success: boolean }> => {
   // Simulate API call
   await new Promise(resolve => setTimeout(resolve, 500));
   

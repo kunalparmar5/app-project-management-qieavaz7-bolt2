@@ -36,7 +36,11 @@ import routes from "tempo-routes";
 
 // Component to handle Tempo routes within Router context
 function TempoRoutes() {
-  return import.meta.env.VITE_TEMPO ? useRoutes(routes) : null;
+  const tempoRoutes = useRoutes(routes);
+  if (!import.meta.env.VITE_TEMPO) {
+    return null;
+  }
+  return tempoRoutes;
 }
 
 function App() {

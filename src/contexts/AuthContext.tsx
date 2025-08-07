@@ -18,7 +18,6 @@ import {
   onAuthStateChanged,
   signInWithPhoneNumber,
   ConfirmationResult,
-  AuthError,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, googleProvider, db } from "../config/firebase";
@@ -26,6 +25,10 @@ import {
   handleFirebaseError,
   debugFirebaseConnection,
 } from "../utils/firebaseDebug";
+
+interface FirebaseError extends Error {
+  code?: string;
+}
 
 // Phone number validation and formatting utilities
 const formatPhoneNumber = (phoneNumber: string): string => {
@@ -173,7 +176,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Create or update user profile in Firestore
   const createUserProfile = async (
     user: User,
-    additionalData?: any,
+    additionalData?: Partial<UserProfile>,
   ): Promise<UserProfile> => {
     try {
       const userRef = doc(db, "users", user.uid);
@@ -321,18 +324,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Validate phone number format
       const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
       if (!isValidPhoneNumber(formattedPhoneNumber)) {
-        const error = new Error(
+        const error: FirebaseError = new Error(
           "Invalid phone number format. Please include country code (e.g., +1234567890).",
-        ) as any;
+        );
         error.code = "auth/invalid-phone-number";
         throw error;
       }
 
       // Check if recaptchaVerifier exists
       if (!window.recaptchaVerifier) {
-        const error = new Error(
+        const error: FirebaseError = new Error(
           "reCAPTCHA verifier not initialized. Please refresh the page and try again.",
-        ) as any;
+        );
         error.code = "auth/captcha-check-failed";
         throw error;
       }
@@ -356,9 +359,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   ): Promise<User> => {
     try {
       if (!code || code.length !== 6) {
-        const error = new Error(
+        const error: FirebaseError = new Error(
           "Please enter a valid 6-digit verification code.",
-        ) as any;
+        );
         error.code = "auth/invalid-verification-code";
         throw error;
       }
