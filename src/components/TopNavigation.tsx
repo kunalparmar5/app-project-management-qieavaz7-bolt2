@@ -1,11 +1,9 @@
 import React from 'react';
 import { 
   Search, 
-  Filter, 
   Plus, 
   Bell, 
   ChevronDown,
-  MoreHorizontal,
   Grid3X3,
   List,
   Calendar

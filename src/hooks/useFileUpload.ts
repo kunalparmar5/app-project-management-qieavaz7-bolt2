@@ -41,8 +41,8 @@ export const useFileUpload = (options: UseFileUploadOptions = {}) => {
   const {
     propertyId,
     maxFiles = DEFAULT_UPLOAD_CONFIG.maxFiles,
-    maxFileSize = DEFAULT_UPLOAD_CONFIG.maxFileSize,
-    acceptedTypes = DEFAULT_UPLOAD_CONFIG.allowedTypes,
+    maxFileSize: _maxFileSize = DEFAULT_UPLOAD_CONFIG.maxFileSize,
+    acceptedTypes: _acceptedTypes = DEFAULT_UPLOAD_CONFIG.allowedTypes,
     uploadEndpoint = DEFAULT_UPLOAD_CONFIG.uploadEndpoint,
     onUploadComplete,
     onUploadError,

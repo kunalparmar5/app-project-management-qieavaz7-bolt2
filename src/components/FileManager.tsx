@@ -4,11 +4,9 @@ import {
   File, 
   Image, 
   FileText, 
-  Download, 
   Trash2, 
   Eye,
   Search,
-  Filter,
   Grid,
   List,
   Upload,
@@ -51,7 +49,7 @@ const FileManager: React.FC<FileManagerProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'images' | 'documents'>('all');
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
 
   // Mock data - in a real app, this would come from an API
   useEffect(() => {
@@ -216,7 +214,7 @@ const FileManager: React.FC<FileManagerProps> = ({
           <div className="flex items-center space-x-2">
             <select
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value as any)}
+              onChange={(e) => setFilterType(e.target.value as 'all' | 'images' | 'documents')}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">All Files</option>

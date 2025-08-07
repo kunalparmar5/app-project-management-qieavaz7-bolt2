@@ -28,7 +28,7 @@ const PropertyListings = () => {
   const [hasMore, setHasMore] = useState(true);
 
   // Mock data fallback - in case Firebase is not available
-  const mockProperties = [
+  const mockProperties = useMemo(() => [
     {
       id: "1",
       title: "Spacious 2BHK Apartment in Andheri West",
@@ -157,10 +157,10 @@ const PropertyListings = () => {
       postedBy: "Owner",
       postedDate: "4 days ago",
     },
-  ];
+  ], []);
 
   // Load properties from Firebase
-  const loadProperties = async (filters: PropertyFilters = {}) => {
+  const loadProperties = useCallback(async (filters: PropertyFilters = {}) => {
     try {
       setLoading(true);
       setError(null);
@@ -194,7 +194,7 @@ const PropertyListings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [mockProperties]);
 
   // Filter properties based on search parameters
   useEffect(() => {
@@ -221,7 +221,7 @@ const PropertyListings = () => {
 
     // Load properties with filters
     loadProperties(filters);
-  }, [searchParams]);
+  }, [searchParams, loadProperties]);
 
   // Initial load
   useEffect(() => {
@@ -233,7 +233,7 @@ const PropertyListings = () => {
         setLoading(false);
       }
     });
-  }, []);
+  }, [mockProperties]);
 
   const filterOptions = {
     propertyType: ["Apartment", "Villa", "Independent House", "Studio"],

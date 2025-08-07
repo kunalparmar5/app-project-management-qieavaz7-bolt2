@@ -5,7 +5,6 @@ import {
   Home,
   BookOpen,
   TrendingUp,
-  DollarSign,
   MapPin,
   GraduationCap,
   Car,
@@ -23,7 +22,6 @@ import {
   Building,
   LineChart,
   PieChart,
-  Calendar,
   Target
 } from 'lucide-react';
 
@@ -31,7 +29,7 @@ interface ServiceItem {
   title: string;
   description: string;
   href: string;
-  icon: React.ComponentType<any>;
+  icon: React.ElementType;
   isNew?: boolean;
   isPopular?: boolean;
 }
@@ -39,7 +37,7 @@ interface ServiceItem {
 interface ServiceSection {
   title: string;
   description: string;
-  icon: React.ComponentType<any>;
+  icon: React.ElementType;
   items: ServiceItem[];
 }
 

@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { propertyService, Property } from "../services/propertyService";
 import {
   Database,
-  Eye,
   RefreshCw,
   AlertCircle,
   CheckCircle,
 } from "lucide-react";
+
+interface FirebaseError extends Error {
+  code?: string;
+}
 
 const DatabaseViewer: React.FC = () => {
   const { currentUser } = useAuth();
@@ -18,18 +21,18 @@ const DatabaseViewer: React.FC = () => {
     "checking" | "connected" | "error"
   >("checking");
 
-  const checkConnection = async () => {
+  const checkConnection = useCallback(async () => {
     try {
       const isConnected = await propertyService.testConnection();
       setConnectionStatus(isConnected ? "connected" : "error");
       return isConnected;
-    } catch (error) {
+    } catch {
       setConnectionStatus("error");
       return false;
     }
-  };
+  }, []);
 
-  const loadAllProperties = async () => {
+  const loadAllProperties = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -50,7 +53,8 @@ const DatabaseViewer: React.FC = () => {
 
       console.log("📊 Database Properties:", allProperties);
       console.log("📊 Total Properties Found:", allProperties.length);
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as FirebaseError;
       console.error("Error loading properties:", error);
 
       // Provide more specific error messages
@@ -68,11 +72,11 @@ const DatabaseViewer: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [checkConnection]);
 
   useEffect(() => {
     loadAllProperties();
-  }, []);
+  }, [loadAllProperties]);
 
   const getStatusColor = (status: string) => {
     switch (status) {

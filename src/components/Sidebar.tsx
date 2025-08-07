@@ -7,7 +7,6 @@ import {
   Calendar, 
   Zap, 
   Settings,
-  ChevronRight,
   Plus
 } from 'lucide-react';
 
