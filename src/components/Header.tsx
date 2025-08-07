@@ -52,7 +52,7 @@ const Header = () => {
     { name: 'Buy', href: '/properties?type=buy', current: false },
     { name: 'Rent', href: '/properties?type=rent', current: false },
     { name: 'Sell', href: '/post-property?type=sell', current: false },
-    { name: 'Rent Out', href: '/post-property?type=rent', current: false },
+    { name: 'Post Property', href: '/post-property?type=rent', current: false },
     { name: 'Commercial', href: '/properties?category=commercial', current: false },
   ];
 
