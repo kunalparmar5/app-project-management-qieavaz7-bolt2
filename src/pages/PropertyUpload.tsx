@@ -43,10 +43,7 @@ const PropertyUpload: React.FC = () => {
   const {
     files,
     isUploading,
-    uploadFiles,
-    removeFile,
     getUploadStats,
-    canUploadMore,
   } = useFileUpload({
     propertyId,
     maxFiles: 15,
@@ -60,15 +57,11 @@ const PropertyUpload: React.FC = () => {
 
   const stats = getUploadStats();
 
-  const handleInputChange = (field: keyof PropertyFormData, value: any) => {
+  const handleInputChange = (field: keyof PropertyFormData, value: string | number | string[]) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
-  };
-
-  const handleFileSelect = async (selectedFiles: FileList) => {
-    await uploadFiles(selectedFiles);
   };
 
   const handleSaveDraft = () => {
@@ -153,11 +146,12 @@ const PropertyUpload: React.FC = () => {
 
       console.log("Submitting property to Firebase:", propertyData);
 
-      const propertyId = await propertyService.createProperty(propertyData);
+      await propertyService.createProperty(propertyData);
 
       alert("Property submitted successfully!");
       navigate("/properties");
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as Error;
       console.error("Failed to submit property:", error);
       alert(
         `Failed to submit property: ${error.message || "Please try again."}`,

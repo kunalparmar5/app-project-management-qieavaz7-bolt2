@@ -66,6 +66,10 @@ export interface PaginationOptions {
   lastDoc?: DocumentSnapshot;
 }
 
+interface FirebaseError extends Error {
+  code?: string;
+}
+
 class PropertyService {
   private collectionName = "properties";
 
@@ -167,7 +171,8 @@ class PropertyService {
 
       console.log(`✅ Successfully retrieved ${properties.length} properties`);
       return { properties, lastDoc };
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as FirebaseError;
       console.error("❌ Error in getProperties:", error);
 
       // Check if user is authenticated

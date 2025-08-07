@@ -20,7 +20,7 @@ const Footer = () => {
         { name: 'Buy Property', href: '/properties?type=buy' },
         { name: 'Rent Property', href: '/properties?type=rent' },
         { name: 'Sell Property', href: '/post-property?type=sell' },
-        { name: 'Post Property', href: '/post-property?type=rent' },
+        { name: 'Rent Out Property', href: '/post-property?type=rent' },
         { name: 'Commercial', href: '/properties?category=commercial' }
       ]
     },

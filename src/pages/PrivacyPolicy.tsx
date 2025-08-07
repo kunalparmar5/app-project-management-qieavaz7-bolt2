@@ -16,8 +16,6 @@ import {
   Mail,
   Phone,
   FileText,
-  Search,
-  ChevronDown,
   ChevronRight,
   Cookie,
   Smartphone,
@@ -26,7 +24,6 @@ import {
 } from 'lucide-react';
 
 const PrivacyPolicy = () => {
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
   const lastUpdated = 'December 15, 2024';
@@ -368,10 +365,6 @@ const PrivacyPolicy = () => {
       ]
     }
   ];
-
-  const toggleSection = (sectionId: string) => {
-    setExpandedSection(expandedSection === sectionId ? null : sectionId);
-  };
 
   const renderTabContent = () => {
     switch (activeTab) {

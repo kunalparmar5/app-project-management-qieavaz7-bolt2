@@ -5,7 +5,8 @@ import {
   Route,
   useRoutes,
 } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider } from "./providers/AuthProvider";
+import { ThemeProvider } from "./providers/ThemeProvider";
 import Header from "./components/Header";
 import HomePage from "./pages/HomePage";
 import PropertyListings from "./pages/PropertyListings";
@@ -46,10 +47,11 @@ function TempoRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-gray-50">
-          <TempoRoutes />
-          <Routes>
+      <ThemeProvider>
+        <Router>
+          <div className="min-h-screen bg-gray-50">
+            <TempoRoutes />
+            <Routes>
             {/* Auth routes without header/footer */}
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
@@ -323,7 +325,8 @@ function App() {
             {import.meta.env.VITE_TEMPO && <Route path="/tempobook/*" />}
           </Routes>
         </div>
-      </Router>
+        </Router>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

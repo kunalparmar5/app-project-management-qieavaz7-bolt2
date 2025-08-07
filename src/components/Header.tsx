@@ -13,7 +13,7 @@ import {
   Settings,
   UserCircle
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import ServicesMenu from './ServicesMenu';
 
 const Header = () => {
@@ -52,7 +52,7 @@ const Header = () => {
     { name: 'Buy', href: '/properties?type=buy', current: false },
     { name: 'Rent', href: '/properties?type=rent', current: false },
     { name: 'Sell', href: '/post-property?type=sell', current: false },
-    { name: 'Post Property', href: '/post-property?type=rent', current: false },
+    { name: 'Rent Out', href: '/post-property?type=rent', current: false },
     { name: 'Commercial', href: '/properties?category=commercial', current: false },
   ];
 

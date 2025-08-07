@@ -13,7 +13,7 @@ import {
   ArrowLeft,
   CheckCircle
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { 
   validateEmail, 
   validatePassword, 
@@ -26,6 +26,11 @@ import {
 } from '../utils/validation';
 import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
 import { setupRecaptcha } from '../config/firebase';
+import { ConfirmationResult } from 'firebase/auth';
+
+interface FirebaseError extends Error {
+  code?: string;
+}
 
 const SignUp: React.FC = () => {
   const navigate = useNavigate();
@@ -49,7 +54,7 @@ const SignUp: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [phoneStep, setPhoneStep] = useState<'phone' | 'verification'>('phone');
-  const [confirmationResult, setConfirmationResult] = useState<any>(null);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [passwordStrength, setPasswordStrength] = useState(checkPasswordStrength(''));
   const [rateLimiter] = useState(() => new RateLimiter(3, 15 * 60 * 1000));
 
@@ -161,7 +166,8 @@ const SignUp: React.FC = () => {
     try {
       await signUp(formData.email, formData.password, formData.name);
       navigate('/dashboard', { replace: true });
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as FirebaseError;
       console.error('Sign up error:', error);
       
       let errorMessage = 'An error occurred during sign up';
@@ -204,7 +210,8 @@ const SignUp: React.FC = () => {
       // First try popup method
       await signInWithGoogle();
       navigate('/dashboard', { replace: true });
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as FirebaseError;
       console.error('Google sign up error:', error);
       
       // If popup is blocked, try redirect method
@@ -213,7 +220,8 @@ const SignUp: React.FC = () => {
           // Use redirect method as fallback
           await signInWithGoogleRedirect();
           // Note: redirect will handle navigation automatically
-        } catch (redirectError: any) {
+        } catch (redirectErr) {
+          const redirectError = redirectErr as FirebaseError;
           console.error('Google redirect sign up error:', redirectError);
           setErrors({ 
             general: 'Unable to sign up with Google. Please try again or use email signup.' 
@@ -258,10 +266,13 @@ const SignUp: React.FC = () => {
         setConfirmationResult(result);
         setPhoneStep('verification');
       } else {
-        await confirmPhoneSignIn(confirmationResult, formData.verificationCode);
-        navigate('/dashboard', { replace: true });
+        if (confirmationResult) {
+          await confirmPhoneSignIn(confirmationResult, formData.verificationCode);
+          navigate('/dashboard', { replace: true });
+        }
       }
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as FirebaseError;
       console.error('Phone sign up error:', error);
       
       let errorMessage = 'Phone authentication failed';

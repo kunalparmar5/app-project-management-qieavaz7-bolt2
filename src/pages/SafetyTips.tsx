@@ -16,7 +16,6 @@ import {
   Camera,
   MapPin,
   Clock,
-  Star,
   Flag,
   HelpCircle,
   Download,

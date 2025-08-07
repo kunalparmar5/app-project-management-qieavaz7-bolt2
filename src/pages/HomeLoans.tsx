@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { 
   Calculator, 
-  TrendingDown, 
-  Shield, 
   Clock, 
   CheckCircle, 
   ArrowRight,
@@ -17,13 +14,10 @@ import {
   Users,
   Award,
   BarChart3,
-  PieChart,
-  LineChart,
   Target,
   Lightbulb,
   AlertTriangle,
   Home,
-  CreditCard,
   DollarSign
 } from 'lucide-react';
 

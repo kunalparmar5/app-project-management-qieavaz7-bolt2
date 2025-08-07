@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { 
   Upload, 
-  MapPin, 
   Home, 
   IndianRupee,
-  Camera,
   X,
   CheckCircle,
   AlertCircle
@@ -99,7 +97,7 @@ const PostProperty = () => {
     'CCTV'
   ];
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value

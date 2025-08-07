@@ -57,7 +57,7 @@ export const uploadFile = async (
 };
 
 // Delete uploaded file
-export const deleteFile = async (_fileId: string): Promise<{ success: boolean }> => {
+export const deleteFile = async (): Promise<{ success: boolean }> => {
   // Simulate API call
   await new Promise(resolve => setTimeout(resolve, 500));
   

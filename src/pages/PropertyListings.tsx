@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
-  Filter,
   Grid,
   List,
   SlidersHorizontal,
-  MapPin,
   Search,
   Loader2,
   AlertCircle,
@@ -25,7 +23,10 @@ const PropertyListings = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(true);
+
+  interface FirebaseError extends Error {
+    code?: string;
+  }
 
   // Mock data fallback - in case Firebase is not available
   const mockProperties = useMemo(() => [
@@ -176,8 +177,8 @@ const PropertyListings = () => {
         setProperties(fetchedProperties);
       }
 
-      setHasMore(fetchedProperties.length === 20);
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as FirebaseError;
       console.error("Error loading properties:", error);
 
       // If it's an authentication error, don't show error message, just use mock data
