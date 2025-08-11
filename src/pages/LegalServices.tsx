@@ -1,29 +1,14 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { 
   Scale, 
-  FileText, 
-  Shield, 
   CheckCircle, 
   Clock, 
-  Users, 
   Phone,
   Mail,
-  MapPin,
   Star,
-  ArrowRight,
   Download,
   AlertTriangle,
-  BookOpen,
-  Gavel,
-  Search,
-  Building,
-  Home,
   IndianRupee,
-  Award,
-  Target,
-  Lightbulb,
-  Building2
 } from 'lucide-react';
 
 const LegalServices = () => {

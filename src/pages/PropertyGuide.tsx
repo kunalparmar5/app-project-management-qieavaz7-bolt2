@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { 
   Home, 
   Search, 
-  FileText, 
   Calculator, 
   Shield, 
   TrendingUp,
@@ -11,22 +10,13 @@ import {
   ArrowRight,
   Download,
   Clock,
-  Users,
-  Star,
   IndianRupee,
   Building,
-  MapPin,
-  Award,
   AlertTriangle,
-  BookOpen,
   Target,
   BarChart3,
-  PieChart,
-  LineChart,
   Lightbulb,
-  DollarSign,
-  Phone,
-  Mail
+  Phone
 } from 'lucide-react';
 
 const PropertyGuide = () => {

@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft, CheckCircle, AlertCircle, Loader2, Home } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { validateEmail, sanitizeInput } from '../utils/validation';
+
+interface FirebaseError extends Error {
+  code?: string;
+}
 
 const ForgotPassword: React.FC = () => {
   const { resetPassword } = useAuth();
@@ -28,7 +32,8 @@ const ForgotPassword: React.FC = () => {
     try {
       await resetPassword(sanitizedEmail);
       setIsSuccess(true);
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as FirebaseError;
       console.error('Password reset error:', error);
       
       let errorMessage = 'Failed to send reset email';

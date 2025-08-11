@@ -6,12 +6,8 @@ import {
   Users, 
   TrendingUp, 
   Award,
-  CheckCircle,
   Star,
-  ArrowRight,
-  Home,
-  Building,
-  MapPin
+  ArrowRight
 } from 'lucide-react';
 
 const HomePage = () => {

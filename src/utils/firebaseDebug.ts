@@ -1,5 +1,8 @@
 import { auth, db } from "../config/firebase";
-import { connectAuthEmulator, connectFirestoreEmulator } from "firebase/auth";
+
+interface FirebaseError extends Error {
+  code?: string;
+}
 
 // Firebase connection debugging utility
 export const debugFirebaseConnection = async () => {
@@ -41,14 +44,15 @@ export const debugFirebaseConnection = async () => {
   try {
     // Test network connectivity to Firebase
     console.log("Testing network connectivity...");
-    const response = await fetch("https://firebase.googleapis.com/", {
+    await fetch("https://firebase.googleapis.com/", {
       method: "HEAD",
       mode: "no-cors",
     });
     results.network = true;
     console.log("✅ Network connectivity to Firebase successful");
-  } catch (error) {
-    results.errors.push(`Network error: ${error}`);
+  } catch (err) {
+    const error = err as FirebaseError;
+    results.errors.push(`Network error: ${error.message}`);
     console.error("❌ Network connectivity error:", error);
   }
 
@@ -89,7 +93,8 @@ export const checkEmulators = () => {
 };
 
 // Enhanced error handler for Firebase operations
-export const handleFirebaseError = (error: any, operation: string) => {
+export const handleFirebaseError = (err: unknown, operation: string) => {
+  const error = err as FirebaseError;
   console.error(`Firebase ${operation} error:`, error);
 
   // Common Firebase error codes and user-friendly messages

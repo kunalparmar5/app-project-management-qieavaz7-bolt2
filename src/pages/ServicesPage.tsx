@@ -8,7 +8,6 @@ import {
   LineChart,
   Home,
   TrendingUp,
-  DollarSign,
   GraduationCap,
   Car,
   Shield,

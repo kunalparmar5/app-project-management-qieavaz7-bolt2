@@ -73,7 +73,7 @@ export const validateFileSize = (file: File): FileValidationResult => {
 
 export const validateFileName = (fileName: string): FileValidationResult => {
   // Check for potentially dangerous characters
-  const dangerousChars = /[<>:"/\\|?*\x00-\x1f]/;
+  const dangerousChars = /[<>:"/\\|?*]/;
   if (dangerousChars.test(fileName)) {
     return {
       valid: false,
@@ -178,12 +178,12 @@ export const getFileCategory = (mimeType: string): 'image' | 'document' | 'other
 export class UploadProgressTracker {
   private xhr: XMLHttpRequest;
   private onProgress?: (progress: number) => void;
-  private onComplete?: (response: any) => void;
+  private onComplete?: (response: unknown) => void;
   private onError?: (error: Error) => void;
 
   constructor(
     onProgress?: (progress: number) => void,
-    onComplete?: (response: any) => void,
+    onComplete?: (response: unknown) => void,
     onError?: (error: Error) => void
   ) {
     this.xhr = new XMLHttpRequest();
@@ -192,7 +192,7 @@ export class UploadProgressTracker {
     this.onError = onError;
   }
 
-  upload(url: string, formData: FormData): Promise<any> {
+  upload(url: string, formData: FormData): Promise<unknown> {
     return new Promise((resolve, reject) => {
       this.xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable) {
@@ -207,7 +207,7 @@ export class UploadProgressTracker {
             const response = JSON.parse(this.xhr.responseText);
             this.onComplete?.(response);
             resolve(response);
-          } catch (error) {
+          } catch {
             const parseError = new Error('Invalid response format');
             this.onError?.(parseError);
             reject(parseError);

@@ -1,30 +1,18 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { 
   TrendingUp, 
   Calculator, 
   MapPin, 
-  Home, 
-  Calendar,
   CheckCircle,
-  ArrowRight,
-  FileText,
   Phone,
   Mail,
   Star,
-  Building,
-  Users,
-  Award,
   BarChart3,
   PieChart,
   LineChart,
-  Shield,
   Target,
   Lightbulb,
-  AlertTriangle,
-  IndianRupee,
   Clock,
-  DollarSign
 } from 'lucide-react';
 
 const PropertyValuation = () => {

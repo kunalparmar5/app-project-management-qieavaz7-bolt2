@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Map, 
   Search, 
   Home, 
   Building, 
@@ -18,7 +17,6 @@ import {
   ChevronRight,
   ChevronDown,
   ExternalLink,
-  Filter,
   Grid,
   List,
   Clock,
@@ -172,8 +170,16 @@ const Sitemap = () => {
     { title: 'Legal Services', url: '/legal-services', date: 'Dec 5, 2024', description: 'Expanded legal assistance options' }
   ];
 
+  interface Page {
+    title: string;
+    url: string;
+    description: string;
+    section: string;
+    sectionIcon: React.ElementType;
+  }
+
   const getAllPages = () => {
-    const allPages: any[] = [];
+    const allPages: Page[] = [];
     Object.values(siteStructure).forEach(section => {
       section.pages.forEach(page => {
         allPages.push({

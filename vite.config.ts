@@ -14,7 +14,7 @@ export default defineConfig({
   server: {
     host: "localhost",
     port: 5173,
-    // @ts-ignore
+    // @ts-expect-error Tempo specific configuration
     allowedHosts: process.env.TEMPO === "true" ? true : undefined,
   },
 });

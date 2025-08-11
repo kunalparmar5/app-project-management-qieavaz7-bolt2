@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Scale, Users, Shield, AlertTriangle, CheckCircle, Clock, Download, Printer as Print, Share2, Bookmark, Search, ChevronRight, ChevronDown, ExternalLink, Mail, Phone } from 'lucide-react';
+import { FileText, Scale, Users, Shield, AlertTriangle, CheckCircle, Clock, Download, Printer as Print, Search, ChevronDown, Mail, Phone } from 'lucide-react';
 
 const TermsOfService = () => {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);

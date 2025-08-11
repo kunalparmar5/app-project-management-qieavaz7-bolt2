@@ -1,38 +1,23 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  MapPin, 
   Search, 
-  TrendingUp, 
   Home, 
   School, 
   Building2, 
   ShoppingBag, 
   Train, 
-  Car, 
-  Plane, 
   Star, 
-  ArrowRight, 
-  Filter, 
   Grid, 
   List,
   Users,
   Building,
   TreePine,
   Shield,
-  Wifi,
   Coffee,
-  Dumbbell,
-  Music,
-  Camera,
   Clock,
-  IndianRupee,
-  TrendingDown,
-  Award,
   CheckCircle,
   AlertTriangle,
-  BarChart3,
-  PieChart,
   Target
 } from 'lucide-react';
 

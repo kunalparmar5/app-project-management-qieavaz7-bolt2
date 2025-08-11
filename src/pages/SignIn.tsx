@@ -11,7 +11,7 @@ import {
   Home,
   ArrowLeft,
 } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import {
   validateEmail,
   validatePassword,
@@ -19,6 +19,11 @@ import {
   RateLimiter,
 } from "../utils/validation";
 import { setupRecaptcha } from "../config/firebase";
+import { ConfirmationResult } from 'firebase/auth';
+
+interface FirebaseError extends Error {
+  code?: string;
+}
 
 const SignIn: React.FC = () => {
   const navigate = useNavigate();
@@ -44,7 +49,7 @@ const SignIn: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [phoneStep, setPhoneStep] = useState<"phone" | "verification">("phone");
-  const [confirmationResult, setConfirmationResult] = useState<any>(null);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [rateLimiter] = useState(() => new RateLimiter(5, 15 * 60 * 1000));
 
   // Redirect if already authenticated
@@ -134,7 +139,8 @@ const SignIn: React.FC = () => {
     try {
       await signIn(formData.email, formData.password, formData.rememberMe);
       navigate(from, { replace: true });
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as FirebaseError;
       console.error("Sign in error:", error);
 
       let errorMessage = "An error occurred during sign in";
@@ -173,7 +179,8 @@ const SignIn: React.FC = () => {
       // First try popup method
       await signInWithGoogle();
       navigate(from, { replace: true });
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as FirebaseError;
       console.error("Google sign in error:", error);
 
       // If popup is blocked, fall back to redirect method
@@ -182,7 +189,8 @@ const SignIn: React.FC = () => {
           // Use redirect method as fallback
           await signInWithGoogleRedirect();
           // Note: redirect will handle navigation automatically
-        } catch (redirectError: any) {
+        } catch (redirectErr) {
+          const redirectError = redirectErr as FirebaseError;
           console.error("Google redirect sign in error:", redirectError);
           setErrors({
             general:
@@ -213,10 +221,13 @@ const SignIn: React.FC = () => {
         setConfirmationResult(result);
         setPhoneStep("verification");
       } else {
-        await confirmPhoneSignIn(confirmationResult, formData.verificationCode);
-        navigate(from, { replace: true });
+        if (confirmationResult) {
+          await confirmPhoneSignIn(confirmationResult, formData.verificationCode);
+          navigate(from, { replace: true });
+        }
       }
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as FirebaseError;
       console.error("Phone sign in error:", error);
 
       let errorMessage = "Phone authentication failed";

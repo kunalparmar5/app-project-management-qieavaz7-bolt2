@@ -15,12 +15,8 @@ import {
   Send,
   Clock,
   CheckCircle,
-  AlertCircle,
   Star,
-  Filter,
-  Book,
-  Video,
-  Download
+  Book
 } from 'lucide-react';
 
 const HelpCenter = () => {

@@ -1,7 +1,10 @@
 import { propertyService } from "../services/propertyService";
 import { debugFirebaseConnection } from "./firebaseDebug";
-import { auth, db } from "../config/firebase";
-import { connectivityState } from "firebase/firestore";
+import { auth } from "../config/firebase";
+
+interface FirebaseError extends Error {
+  code?: string;
+}
 
 // Database health check interface
 export interface DatabaseHealthCheck {
@@ -54,7 +57,8 @@ export const performDatabaseHealthCheck =
             "Check Firestore security rules and ensure proper authentication",
           );
         }
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as FirebaseError;
         healthCheck.services.propertyService = false;
         healthCheck.errors.push(`Property service error: ${error.message}`);
       }
@@ -74,7 +78,7 @@ export const performDatabaseHealthCheck =
         // Note: connectivityState is not available in all Firebase versions
         // This is a placeholder for future implementation
         console.log("📡 Checking Firestore connectivity...");
-      } catch (error) {
+      } catch {
         console.log("ℹ️ Connectivity state check not available");
       }
 
@@ -125,7 +129,8 @@ export const performDatabaseHealthCheck =
       }
 
       return healthCheck;
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as FirebaseError;
       console.error("❌ Database health check failed:", error);
       healthCheck.errors.push(`Health check failed: ${error.message}`);
       return healthCheck;
@@ -211,7 +216,8 @@ export const validateDatabaseMapping = async (): Promise<{
         "No properties found in database - consider adding sample data",
       );
     }
-  } catch (error: any) {
+  } catch (err) {
+    const error = err as FirebaseError;
     validation.isValid = false;
     validation.issues.push(
       `Database mapping validation failed: ${error.message}`,

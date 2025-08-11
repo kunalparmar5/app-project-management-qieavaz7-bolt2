@@ -18,14 +18,11 @@ import {
   Car,
   Wifi,
   Dumbbell,
-  Trees,
-  Camera,
-  Video,
-  Map
+  Trees
 } from 'lucide-react';
 
 const PropertyDetails = () => {
-  const { id } = useParams();
+  useParams();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showContactForm, setShowContactForm] = useState(false);
 
