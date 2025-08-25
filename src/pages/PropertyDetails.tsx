@@ -348,34 +348,38 @@ const PropertyDetails = () => {
                   onClick={() => setShowContactForm(!showContactForm)}
                   className="w-full text-blue-600 font-medium hover:text-blue-700"
                 >
-                  Get Contact Details
+          src={property.images && property.images.length > 0 ? property.images[currentImageIndex] : 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=800'}
                 </button>
               </div>
             </div>
 
             {/* Similar Properties */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
+        {property.images && property.images.length > 1 && (
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Similar Properties</h3>
               <div className="space-y-4">
                 {[1, 2, 3].map((item) => (
                   <div key={item} className="flex space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <img
                       src="https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=200"
-                      alt="Similar property"
-                      className="w-16 h-16 object-cover rounded-lg"
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900 text-sm">2BHK Apartment</h4>
-                      <p className="text-gray-600 text-xs">Andheri West</p>
-                      <p className="text-blue-600 font-semibold text-sm">₹42,000/month</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+      {property.images && property.images.length > 1 && (
+        <div className="p-4 flex space-x-2 overflow-x-auto">
+          {property.images.map((image, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentImageIndex(index)}
+              className={`flex-shrink-0 w-20 h-16 rounded-lg overflow-hidden border-2 ${
+                index === currentImageIndex ? 'border-blue-500' : 'border-gray-200'
+              }`}
+            >
+              <img
+                src={image}
+                alt={`View ${index + 1}`}
+                className="w-full h-full object-cover"
+              />
+            </button>
+          ))}
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -134,8 +134,8 @@ const PropertyUpload: React.FC = () => {
         sqft: formData.sqft,
         amenities: formData.amenities,
         images: files
-          .filter((f) => f.status === "completed")
-          .map((f) => f.url || ""),
+          .filter((f) => f.status === "completed" && f.url)
+          .map((f) => f.url),
         type: "rent" as const, // You might want to add this to your form
         isVerified: false,
         postedBy: "Owner", // You might want to add this to your form
@@ -145,6 +145,7 @@ const PropertyUpload: React.FC = () => {
       };
 
       console.log("Submitting property to Firebase:", propertyData);
+      console.log("Images being saved:", propertyData.images);
 
       await propertyService.createProperty(propertyData);
 

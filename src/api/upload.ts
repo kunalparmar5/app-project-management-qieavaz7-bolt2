@@ -39,9 +39,9 @@ export const uploadFile = async (
         // Simulate successful upload response
         const response: UploadResponse = {
           success: true,
-          url: `https://example.com/uploads/${propertyId}/${file.name}`,
+          url: `https://images.pexels.com/photos/${Math.floor(Math.random() * 1000000) + 1000000}/pexels-photo-${Math.floor(Math.random() * 1000000) + 1000000}.jpeg?auto=compress&cs=tinysrgb&w=800`,
           thumbnailUrl: file.type.startsWith('image/') 
-            ? `https://example.com/uploads/${propertyId}/thumb_${file.name}`
+            ? `https://images.pexels.com/photos/${Math.floor(Math.random() * 1000000) + 1000000}/pexels-photo-${Math.floor(Math.random() * 1000000) + 1000000}.jpeg?auto=compress&cs=tinysrgb&w=200`
             : undefined,
           fileId: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           fileName: file.name,

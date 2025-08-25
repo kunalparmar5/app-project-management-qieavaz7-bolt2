@@ -194,6 +194,34 @@ export class UploadProgressTracker {
 
   upload(url: string, formData: FormData): Promise<unknown> {
     return new Promise((resolve, reject) => {
+      // Simulate successful upload for demo purposes
+      setTimeout(() => {
+        const mockResponse = {
+          success: true,
+          url: `https://images.pexels.com/photos/${Math.floor(Math.random() * 1000000) + 1000000}/pexels-photo-${Math.floor(Math.random() * 1000000) + 1000000}.jpeg?auto=compress&cs=tinysrgb&w=800`,
+          thumbnailUrl: `https://images.pexels.com/photos/${Math.floor(Math.random() * 1000000) + 1000000}/pexels-photo-${Math.floor(Math.random() * 1000000) + 1000000}.jpeg?auto=compress&cs=tinysrgb&w=200`,
+          fileId: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          fileName: formData.get('fileName') || 'uploaded-file',
+          size: 1024000,
+          type: 'image/jpeg'
+        };
+        this.onComplete?.(mockResponse);
+        resolve(mockResponse);
+      }, 1000 + Math.random() * 2000); // Simulate 1-3 second upload time
+
+      // Simulate progress updates
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += Math.random() * 20;
+        if (progress > 100) {
+          progress = 100;
+          clearInterval(progressInterval);
+        }
+        this.onProgress?.(progress);
+      }, 200);
+
+      return; // Skip the actual XMLHttpRequest code for demo
+
       this.xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable) {
           const progress = (e.loaded / e.total) * 100;

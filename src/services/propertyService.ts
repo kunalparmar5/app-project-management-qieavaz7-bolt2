@@ -86,7 +86,12 @@ class PropertyService {
         status: propertyData.status || "active",
         isVerified: propertyData.isVerified || false,
         viewCount: 0,
+        // Ensure images array is properly stored
+        images: propertyData.images || [],
       };
+
+      console.log("Creating property with data:", propertyWithTimestamps);
+      console.log("Images being stored:", propertyWithTimestamps.images);
 
       const docRef = await addDoc(
         collection(db, this.collectionName),

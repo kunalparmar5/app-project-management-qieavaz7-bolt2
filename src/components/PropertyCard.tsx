@@ -48,16 +48,18 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       {/* Image Section */}
       <div className="relative">
         <img
-          src={property.images[0]}
+          src={property.images && property.images.length > 0 ? property.images[0] : 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=800'}
           alt={property.title}
           className="w-full h-48 object-cover"
         />
         
         {/* Image Count */}
-        <div className="absolute top-3 left-3 bg-black bg-opacity-70 text-white px-2 py-1 rounded-md text-xs flex items-center space-x-1">
-          <Camera className="h-3 w-3" />
-          <span>{property.images.length}</span>
-        </div>
+        {property.images && property.images.length > 0 && (
+          <div className="absolute top-3 left-3 bg-black bg-opacity-70 text-white px-2 py-1 rounded-md text-xs flex items-center space-x-1">
+            <Camera className="h-3 w-3" />
+            <span>{property.images.length}</span>
+          </div>
+        )}
 
         {/* Favorite Button */}
         <button

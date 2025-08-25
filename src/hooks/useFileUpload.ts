@@ -187,9 +187,15 @@ export const useFileUpload = (options: UseFileUploadOptions = {}) => {
       return uploadedFile;
 
     } catch (error) {
-      // Remove file from state if upload setup failed
+      // Update file status to error instead of removing
+      const errorFile: UploadedFile = {
+        ...uploadedFile,
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Upload failed'
+      };
+
       setFiles(prev => {
-        const updated = prev.filter(f => f.id !== uploadedFile.id);
+        const updated = prev.map(f => f.id === uploadedFile.id ? errorFile : f);
         onFilesChange?.(updated);
         return updated;
       });
