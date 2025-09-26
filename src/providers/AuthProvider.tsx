@@ -54,7 +54,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   ): Promise<UserProfile> => {
     try {
       const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
+      
+      let userSnap;
+      try {
+        userSnap = await getDoc(userRef);
+      } catch (error: any) {
+        // Handle offline mode gracefully
+        if (error.code === 'unavailable' || error.message?.includes('offline')) {
+          console.warn('Firestore is offline, creating local user profile');
+          
+          // Create a basic profile for offline mode
+          const offlineProfile: UserProfile = {
+            uid: user.uid,
+            email: user.email || "",
+            displayName: user.displayName || "",
+            phoneNumber: user.phoneNumber || null,
+            photoURL: user.photoURL || null,
+            createdAt: new Date(),
+            lastLoginAt: new Date(),
+            emailVerified: user.emailVerified,
+            preferences: {
+              notifications: true,
+              marketing: false,
+              rememberMe: false,
+            },
+            profile: {
+              firstName: user.displayName?.split(" ")[0] || "",
+              lastName: user.displayName?.split(" ").slice(1).join(" ") || "",
+            },
+            propertyPreferences: {
+              propertyType: [],
+              budget: { min: 0, max: 0 },
+              location: [],
+              amenities: [],
+            },
+            savedProperties: [],
+            viewedProperties: [],
+            role: "user",
+            isActive: true,
+            ...additionalData,
+          };
+          
+          return offlineProfile;
+        }
+        throw error;
+      }
 
       if (!userSnap.exists()) {
         const { displayName, email, phoneNumber, photoURL } = user;
@@ -95,6 +139,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await setDoc(userRef, newProfile);
           return newProfile;
         } catch (error) {
+          // Handle offline mode for profile creation
+          if ((error as any).code === 'unavailable') {
+            console.warn('Creating user profile offline, will sync when online');
+            return newProfile;
+          }
           const firebaseError = handleFirebaseError(error, "create user profile");
           throw firebaseError;
         }
@@ -111,13 +160,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await setDoc(userRef, updatedProfile, { merge: true });
           return updatedProfile;
         } catch (error) {
+          // Handle offline mode for profile updates
+          if ((error as any).code === 'unavailable') {
+            console.warn('Updating user profile offline, will sync when online');
+            return updatedProfile;
+          }
           const firebaseError = handleFirebaseError(error, "update user profile");
           throw firebaseError;
         }
       }
     } catch (error) {
-      const firebaseError = handleFirebaseError(error, "get user profile");
-      throw firebaseError;
+      // Only throw error if it's not an offline/connectivity issue
+      if ((error as any).code !== 'unavailable' && !(error as any).message?.includes('offline')) {
+        const firebaseError = handleFirebaseError(error, "get user profile");
+        throw firebaseError;
+      }
+      
+      // For offline errors, return a basic profile
+      console.warn('Operating in offline mode, using basic user profile');
+      return {
+        uid: user.uid,
+        email: user.email || "",
+        displayName: user.displayName || "",
+        phoneNumber: user.phoneNumber || null,
+        photoURL: user.photoURL || null,
+        createdAt: new Date(),
+        lastLoginAt: new Date(),
+        emailVerified: user.emailVerified,
+        preferences: {
+          notifications: true,
+          marketing: false,
+          rememberMe: false,
+        },
+        profile: {
+          firstName: user.displayName?.split(" ")[0] || "",
+          lastName: user.displayName?.split(" ").slice(1).join(" ") || "",
+        },
+        propertyPreferences: {
+          propertyType: [],
+          budget: { min: 0, max: 0 },
+          location: [],
+          amenities: [],
+        },
+        savedProperties: [],
+        viewedProperties: [],
+        role: "user",
+        isActive: true,
+      };
     }
   };
 

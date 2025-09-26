@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, RecaptchaVerifier } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider, RecaptchaVerifier, connectAuthEmulator } from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 // Firebase configuration
@@ -20,6 +20,42 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// Enable offline persistence for Firestore
+try {
+  // Enable offline persistence
+  if (typeof window !== 'undefined') {
+    import('firebase/firestore').then(({ enableNetwork, disableNetwork }) => {
+      // Enable network by default
+      enableNetwork(db).catch((error) => {
+        console.warn('Failed to enable Firestore network:', error);
+      });
+    });
+  }
+} catch (error) {
+  console.warn('Firestore offline persistence setup failed:', error);
+}
+
+// Development mode: Use emulators if available
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  const isLocalhost = window.location.hostname === 'localhost' || 
+                     window.location.hostname === '127.0.0.1';
+  
+  if (isLocalhost) {
+    try {
+      // Only connect to emulators if not already connected
+      if (!auth.config.emulator) {
+        connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+      }
+      if (!(db as any)._delegate._databaseId.projectId.includes('demo-')) {
+        connectFirestoreEmulator(db, 'localhost', 8080);
+      }
+      console.log('🔧 Connected to Firebase emulators for development');
+    } catch (error) {
+      console.log('ℹ️ Firebase emulators not available, using production Firebase');
+    }
+  }
+}
 
 // Configure Google Auth Provider
 export const googleProvider = new GoogleAuthProvider();

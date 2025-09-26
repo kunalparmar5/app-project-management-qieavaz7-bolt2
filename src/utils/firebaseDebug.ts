@@ -95,10 +95,18 @@ export const checkEmulators = () => {
 // Enhanced error handler for Firebase operations
 export const handleFirebaseError = (err: unknown, operation: string) => {
   const error = err as FirebaseError;
-  console.error(`Firebase ${operation} error:`, error);
+  
+  // Don't log offline errors as errors, just warnings
+  if (error.code === 'unavailable' || error.message?.includes('offline')) {
+    console.warn(`Firebase ${operation} - operating offline:`, error.message);
+  } else {
+    console.error(`Firebase ${operation} error:`, error);
+  }
 
   // Common Firebase error codes and user-friendly messages
   const errorMessages: { [key: string]: string } = {
+    "unavailable": "The app is currently offline. Some features may be limited until connection is restored.",
+    "failed-precondition": "The operation was rejected because the system is not in a state required for the operation's execution.",
     "auth/network-request-failed":
       "Network connection failed. Please check your internet connection.",
     "auth/too-many-requests":
